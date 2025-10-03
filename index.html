@@ -5,41 +5,74 @@
   <title>로딩 중...</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{background:#0f1115;color:#fff;font-family:Arial,Helvetica,sans-serif;margin:0;padding:28px}
-    h1{margin:0 0 14px;text-align:center}
+    :root{--bg:#0f1115;--card:#1a1d23;--panel:#12151c;--muted:#97a0b8;--ok:#00e676;--warn:#ffca28;--err:#ff5252;--border:#2a2f3a}
+    *{box-sizing:border-box}
+    body{background:var(--bg);color:#fff;font-family:Arial,Helvetica,sans-serif;margin:0;padding:0}
+    .layout{display:grid;grid-template-columns: 1fr 320px;gap:16px;min-height:100vh;padding:20px}
+    header{grid-column:1 / -1;text-align:center}
+    h1{margin:0 0 8px}
     .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin:8px auto 18px}
     .controls>*{background:#1f1f1f;color:#fff;border:none;border-radius:8px;padding:9px 11px;font-size:14px}
     .controls input{min-width:160px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;max-width:1200px;margin:0 auto}
-    .card{background:#1a1d23;border-radius:12px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;max-width:1200px;margin:0 auto}
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,.25);position:relative}
     .sym{font-weight:700;margin-bottom:6px;letter-spacing:.3px}
     .price{font-size:22px;font-weight:800;margin:6px 0}
-    .up{color:#00e676}
-    .down{color:#ff5252}
+    .up{color:var(--ok)}
+    .down{color:var(--err)}
     .muted{opacity:.7;font-size:12px}
     .badge{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700}
-    .badge.up{background:rgba(0,230,118,.15);color:#00e676;border:1px solid rgba(0,230,118,.4)}
-    .badge.down{background:rgba(255,82,82,.15);color:#ff5252;border:1px solid rgba(255,82,82,.4)}
+    .badge.up{background:rgba(0,230,118,.15);color:var(--ok);border:1px solid rgba(0,230,118,.4)}
+    .badge.down{background:rgba(255,82,82,.15);color:var(--err);border:1px solid rgba(255,82,82,.4)}
+    .del{position:absolute;top:8px;right:8px;background:#2a2f3a;border:1px solid #3a4150;border-radius:6px;font-size:12px;padding:4px 8px;color:#cfd6e6;cursor:pointer}
+    .del:hover{background:#353c4b}
     .status{ text-align:center; margin:10px auto 0; font-size:12px; color:#aaa; max-width:960px }
     .error{ color:#ff8a80 }
-    .log{white-space:pre-wrap;background:#101318;border:1px solid #2a2f3a;border-radius:8px;padding:10px;max-width:960px;margin:10px auto 0;font-size:12px;color:#c7cfe2}
+    .log{white-space:pre-wrap;background:#101318;border:1px solid var(--border);border-radius:8px;padding:10px;max-width:960px;margin:10px auto 0;font-size:12px;color:#c7cfe2}
+    /* 오른쪽 패널 */
+    aside.status-panel{position:sticky;top:20px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;height:fit-content}
+    .row{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+    .k{opacity:.7}
+    .v{font-weight:700}
+    .tag{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+    .ok{background:rgba(0,230,118,.15);color:var(--ok);border:1px solid rgba(0,230,118,.4)}
+    .err{background:rgba(255,82,82,.15);color:var(--err);border:1px solid rgba(255,82,82,.4)}
+    .hr{height:1px;background:var(--border);margin:2px 0}
+    .list{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{border:1px solid var(--border);background:#171a21;padding:4px 8px;border-radius:999px;font-size:12px}
+    @media(max-width:960px){.layout{grid-template-columns:1fr}} /* 모바일에서는 패널 아래로 */
   </style>
 </head>
 <body>
-  <h1>바이낸스 실시간 코인 가격</h1>
+  <div class="layout">
+    <header>
+      <h1>바이낸스 실시간 코인 가격</h1>
+      <div class="controls">
+        <label style="background:none;padding:0">탭 제목 코인</label>
+        <select id="titleCoin"></select>
+        <input id="addInput" placeholder="추가할 코인 (예: ADA 또는 ADAUSDT)" />
+        <button id="addBtn">코인 추가</button>
+        <button id="refreshBtn">연결 재시도</button>
+      </div>
+    </header>
 
-  <div class="controls">
-    <label style="background:none;padding:0">탭 제목 코인</label>
-    <select id="titleCoin"></select>
+    <main>
+      <div class="grid" id="grid"></div>
+      <div class="status" id="status">초기화 중…</div>
+      <div class="log" id="log" style="display:none"></div>
+    </main>
 
-    <input id="addInput" placeholder="추가할 코인 (예: ADA 또는 ADAUSDT)" />
-    <button id="addBtn">코인 추가</button>
-    <button id="refreshBtn">연결 재시도</button>
+    <aside class="status-panel" id="panel">
+      <div class="row"><span class="k">연결 상태</span><span class="v"><span id="connTag" class="tag ok">연결됨</span></span></div>
+      <div class="row"><span class="k">모드</span><span class="v" id="mode">combined</span></div>
+      <div class="row"><span class="k">마지막 수신</span><span class="v" id="last">-</span></div>
+      <div class="row"><span class="k">구독 심볼</span><span class="v" id="count">0개</span></div>
+      <div class="hr"></div>
+      <div class="row"><span class="k">재연결 대기</span><span class="v" id="backoff">1.0s</span></div>
+      <div class="hr"></div>
+      <div class="list" id="symbols"></div>
+    </aside>
   </div>
-
-  <div class="grid" id="grid"></div>
-  <div class="status" id="status">초기화 중…</div>
-  <div class="log" id="log" style="display:none"></div>
 
   <script>
     // ===== 초기 목록 (알파벳) =====
@@ -57,6 +90,7 @@
     let reconnectDelay = 1000;
     let lastMsgTS = 0;
     let mode = 'combined'; // 'combined' | 'arr'
+    let connected = false;
 
     const grid = document.getElementById('grid');
     const titleSel = document.getElementById('titleCoin');
@@ -65,6 +99,14 @@
     const refreshBtn = document.getElementById('refreshBtn');
     const statusEl = document.getElementById('status');
     const logEl = document.getElementById('log');
+
+    // 패널 요소
+    const connTag = document.getElementById('connTag');
+    const modeEl = document.getElementById('mode');
+    const lastEl = document.getElementById('last');
+    const countEl = document.getElementById('count');
+    const backoffEl = document.getElementById('backoff');
+    const symListEl = document.getElementById('symbols');
 
     function log(msg){
       logEl.style.display='block';
@@ -96,12 +138,25 @@
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
+        <button class="del" data-sym="${sym}" title="삭제">삭제</button>
         <div class="sym">${displayName(sym)}</div>
         <div class="price" id="${sym}">로딩 중…</div>
         <div class="badge" id="chg-${sym}" style="display:none"></div>
         <div class="muted" id="note-${sym}"></div>
       `;
       grid.appendChild(card);
+    }
+
+    function updatePanel(){
+      // 연결 태그
+      connTag.textContent = connected ? '연결됨' : '끊김';
+      connTag.className = 'tag ' + (connected ? 'ok' : 'err');
+      modeEl.textContent = mode;
+      countEl.textContent = coins.length + '개';
+      backoffEl.textContent = (reconnectDelay/1000).toFixed(1) + 's';
+      // 심볼 칩
+      symListEl.innerHTML = '';
+      coins.forEach(s=>{ const chip = document.createElement('div'); chip.className='chip'; chip.textContent=s.toUpperCase(); symListEl.appendChild(chip); });
     }
 
     function updateCard(sym, priceStr){
@@ -125,10 +180,11 @@
       }
     }
 
+    function dot(){ return connected ? '🟢' : '🔴'; }
     function updateTitle(sym){
       const p = curPrice.get(sym);
       const tag = sym.replace('usdt','').toUpperCase();
-      document.title = p ? `$${p} - ${tag}` : `로딩 중... - ${tag}`;
+      document.title = p ? `${dot()} $${p} - ${tag}` : `${dot()} 로딩 중... - ${tag}`;
     }
 
     async function fetch24hChanges(){
@@ -153,10 +209,11 @@
       setStatus(`실시간 연결 중… (mode=${mode})`);
       ws = new WebSocket(url);
 
-      ws.onopen = ()=>{ setStatus('실시간 연결 완료'); reconnectDelay=1000; };
+      ws.onopen = ()=>{ connected = true; setStatus('실시간 연결 완료'); reconnectDelay=1000; updatePanel(); updateTitle(titleSel.value); };
 
       ws.onmessage = (evt)=>{
         lastMsgTS = Date.now();
+        if(!connected){ connected=true; updatePanel(); updateTitle(titleSel.value); }
         try{
           const payload = JSON.parse(evt.data);
           if(mode==='combined'){
@@ -169,7 +226,6 @@
           } else { // arr mode: 배열 전체
             const arr = Array.isArray(payload) ? payload : payload.data;
             if(!Array.isArray(arr)) return;
-            // 관심 심볼만 업데이트
             for(const it of arr){
               const s = it.s?.toLowerCase?.();
               if(!s || !coins.includes(s)) continue;
@@ -179,32 +235,37 @@
               if(titleSel.value===s) updateTitle(s);
             }
           }
+          lastEl.textContent = new Date().toLocaleTimeString();
         }catch(e){ log('메시지 파싱 실패: '+(e?.message||e)); }
       };
 
       ws.onclose = ()=>{
+        connected = false; updatePanel(); updateTitle(titleSel.value);
         setStatus('연결 끊김 – 재시도 대기…');
         setTimeout(()=>{ connectWS(); }, reconnectDelay);
         reconnectDelay = Math.min(reconnectDelay*2, 30000);
       };
 
       ws.onerror = (e)=>{
+        connected = false; updatePanel(); updateTitle(titleSel.value);
         setStatus('실시간 연결 오류', true);
         log('WS error: '+(e?.message||e));
         try{ ws.close(); }catch(_){}
       };
 
-      // 7초 동안 메시지가 없으면 arr 모드로 자동 전환 (혹시 스트림 조합이 막힌 환경 대비)
+      // 7초 동안 메시지가 없으면 모드 전환
       setTimeout(()=>{
         if(Date.now()-lastMsgTS > 7000){
           mode = (mode==='combined') ? 'arr' : 'combined';
           setStatus(`메시지 무응답 → 모드 전환: ${mode}`);
+          updatePanel();
           connectWS();
         }
       }, 7500);
     }
 
     function rebuildUI(){
+      const prevSel = titleSel.value;
       titleSel.innerHTML=''; grid.innerHTML='';
       coins.sort();
       coins.forEach(sym=>{
@@ -213,8 +274,30 @@
         opt.value = sym; opt.textContent = displayName(sym);
         titleSel.appendChild(opt);
       });
-      if(!coins.includes(titleSel.value)) titleSel.value = coins[0] || '';
+      titleSel.value = coins.includes(prevSel) ? prevSel : (coins[0] || '');
       if(titleSel.value) updateTitle(titleSel.value);
+      updatePanel();
+    }
+
+    function removeSymbol(sym){
+      const idx = coins.indexOf(sym);
+      if(idx === -1) return;
+      coins.splice(idx,1);
+      lastPrice.delete(sym); curPrice.delete(sym); changePct.delete(sym);
+      const priceEl = document.getElementById(sym);
+      if(priceEl){ const card = priceEl.closest('.card'); if(card) card.remove(); }
+      if(titleSel.value === sym){
+        titleSel.value = coins[0] || '';
+        if(titleSel.value) updateTitle(titleSel.value); else document.title = '코인 가격';
+      }
+      const prevSel = titleSel.value;
+      titleSel.innerHTML='';
+      coins.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=displayName(s); titleSel.appendChild(o); });
+      titleSel.value = prevSel && coins.includes(prevSel) ? prevSel : (coins[0]||'');
+      connectWS();
+      fetch24hChanges();
+      updatePanel();
+      setStatus(`${displayName(sym)} 제거됨`);
     }
 
     async function addSymbolFromInput(){
@@ -225,6 +308,14 @@
       setStatus(`${displayName(sym)} 추가됨`);
     }
 
+    // 이벤트 위임: 삭제 버튼
+    document.getElementById('grid').addEventListener('click', (e)=>{
+      const btn = e.target.closest('.del');
+      if(!btn) return;
+      const sym = btn.dataset.sym;
+      if(sym) removeSymbol(sym);
+    });
+
     (async function init(){
       const set = new Set(initialCoins.map(c=>normalize(c)));
       coins = [...set];
@@ -232,6 +323,8 @@
       connectWS();
       fetch24hChanges();
       setInterval(fetch24hChanges, 5*60*1000);
+      // 패널 시간 표기 keep-alive
+      setInterval(()=>{ lastEl.textContent = new Date().toLocaleTimeString(); }, 2000);
     })();
 
     addBtn.addEventListener('click', addSymbolFromInput);

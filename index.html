@@ -8,31 +8,53 @@
     :root{--bg:#0f1115;--card:#1a1d23;--panel:#12151c;--muted:#97a0b8;--ok:#00e676;--warn:#ffca28;--err:#ff5252;--border:#2a2f3a}
     *{box-sizing:border-box}
     body{background:var(--bg);color:#fff;font-family:Arial,Helvetica,sans-serif;margin:0;padding:0}
-    .layout{display:grid;grid-template-columns: 1fr 320px;gap:16px;min-height:100vh;padding:20px}
+    .layout{display:grid;grid-template-columns:1fr 320px;gap:16px;min-height:100vh;padding:20px}
     header{grid-column:1 / -1;text-align:center}
     h1{margin:0 0 8px}
     .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin:8px auto 18px}
     .controls>*{background:#1f1f1f;color:#fff;border:none;border-radius:8px;padding:9px 11px;font-size:14px}
     .controls input{min-width:160px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;max-width:1200px;margin:0 auto}
-    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,.25);position:relative}
-    .sym{font-weight:700;margin-bottom:6px;letter-spacing:.3px}
-    .price{font-size:22px;font-weight:800;margin:6px 0;display:flex;align-items:center;gap:6px}
+    .sort-group{display:flex;gap:6px}
+    .btn{cursor:pointer}
+    .btn.active{outline:2px solid var(--ok)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;max-width:1400px;margin:0 auto;align-items:start}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 4px 12px rgba(0,0,0,.25);position:relative}
+
+    /* 상단영역: 심볼 왼쪽, 배지 + 삭제 버튼 오른쪽 */
+    .top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+    .right{display:flex;align-items:center;gap:8px}
+
+    .sym{font-weight:700;letter-spacing:.3px;font-size:16px}
+    .price{font-size:26px;font-weight:800;margin:6px 0;display:flex;align-items:center;gap:6px}
     .dir{font-weight:900}
     .dir.up{color:var(--ok)}
     .dir.down{color:var(--err)}
     .up{color:var(--ok)}
     .down{color:var(--err)}
-    .muted{opacity:.7;font-size:12px}
-    .badge{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700}
+    .muted{opacity:.7;font-size:13px}
+
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
     .badge.up{background:rgba(0,230,118,.15);color:var(--ok);border:1px solid rgba(0,230,118,.4)}
     .badge.down{background:rgba(255,82,82,.15);color:var(--err);border:1px solid rgba(255,82,82,.4)}
-    .del{position:absolute;top:8px;right:8px;background:#2a2f3a;border:1px solid #3a4150;border-radius:6px;font-size:12px;padding:4px 8px;color:#cfd6e6;cursor:pointer}
+
+    .del{background:#2a2f3a;border:1px solid #3a4150;border-radius:6px;font-size:12px;padding:4px 8px;color:#cfd6e6;cursor:pointer}
     .del:hover{background:#353c4b}
-    .status{ text-align:center; margin:10px auto 0; font-size:12px; color:#aaa; max-width:960px }
-    .error{ color:#ff8a80 }
-    .log{white-space:pre-wrap;background:#101318;border:1px solid var(--border);border-radius:8px;padding:10px;max-width:960px;margin:10px auto 0;font-size:12px;color:#c7cfe2}
-    /* 오른쪽 패널 */
+
+    /* 상세 정보: 한 줄에 하나씩 (라벨-값) */
+    .details{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px;font-size:12px}
+    .compact .details{display:none}
+    .kv{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .kv .label{opacity:.85}
+    .kv .val{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .kv.tight{gap:6px} /* 24h 변화율은 라벨-값 간격 좁게 */
+
+    .spark{margin-top:8px;background:#11151d;border:1px solid var(--border);border-radius:8px;padding:6px}
+    .spark canvas{width:100%;height:56px}
+    .spark .spark-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:12px;color:var(--muted)}
+    .spark .tabs{display:flex;gap:6px}
+    .spark .tabs button{all:unset;background:#1f1f1f;border:1px solid var(--border);padding:4px 8px;border-radius:6px;cursor:pointer}
+    .spark .tabs button.active{outline:2px solid var(--ok)}
+
     aside.status-panel{position:sticky;top:20px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;height:fit-content}
     .row{display:flex;justify-content:space-between;gap:10px;font-size:14px}
     .k{opacity:.7}
@@ -43,7 +65,9 @@
     .hr{height:1px;background:var(--border);margin:2px 0}
     .list{display:flex;flex-wrap:wrap;gap:6px}
     .chip{border:1px solid var(--border);background:#171a21;padding:4px 8px;border-radius:999px;font-size:12px}
-    @media(max-width:960px){.layout{grid-template-columns:1fr}} /* 모바일에서는 패널 아래로 */
+
+    @media(max-width:1200px){.grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));max-width:100%}}
+    @media(max-width:960px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}}
   </style>
 </head>
 <body>
@@ -54,8 +78,15 @@
         <label style="background:none;padding:0">탭 제목 코인</label>
         <select id="titleCoin"></select>
         <input id="addInput" placeholder="추가할 코인 (예: ADA 또는 ADAUSDT)" />
-        <button id="addBtn">코인 추가</button>
-        <button id="refreshBtn">연결 재시도</button>
+        <button id="addBtn" class="btn">코인 추가</button>
+        <button id="refreshBtn" class="btn">연결 재시도</button>
+        <button id="toggleView" class="btn">상세보기 토글</button>
+        <div class="sort-group">
+          <button class="btn" id="sortNone">기본</button>
+          <button class="btn" id="sortChange">상승률 순</button>
+          <button class="btn" id="sortVol">거래량 순</button>
+          <button class="btn" id="sortVola">변동성 순</button>
+        </div>
       </div>
     </header>
 
@@ -78,27 +109,28 @@
   </div>
 
   <script>
-    // ===== 초기 목록 (알파벳) =====
     const initialCoins = [
-      'ACM','ALICE','ALGO','APT','ASTR','BNB','BTC','CETUS','CRV','DYDX','DUSK','EIGEN','ETH','FIDA','FIL','FLOW','GMT','ICP','ICX','JASMY','NEAR','NEO','NMR','OG','POL','POWR','PUNDIX','QI','QNT','QTUM','RARE','RDNT','REI','SOL','T','TIA','WOO','XEC','XVG','YGG','ZEN','ZEC'
+      'A','ACM','ALICE','ALGO','APT','ASTR','BNB','BTC','CETUS','CRV','DYDX','DUSK','EIGEN','ETH','FIDA','FIL','FLOW','GMT','ICP','ICX','JASMY','NEAR','NEO','NMR','OG','POL','POWR','PUNDIX','QI','QNT','QTUM','RARE','RDNT','REI','SOL','T','TIA','WOO','XEC','XVG','YGG','ZEN','ZEC'
     ];
 
-    // ===== 상태 =====
-    let coins = []; // 소문자 usdt 접미어
+    let coins = [];
     const lastPrice = new Map();
     const curPrice  = new Map();
-    const dirMap    = new Map(); // -1 하락, 0 유지, 1 상승
+    const dirMap    = new Map();
     const changePct = new Map();
+    const baseVol   = new Map();
+    const volaPct   = new Map();
 
     let ws = null;
     let reconnectDelay = 1000;
     let lastMsgTS = 0;
-    let mode = 'combined'; // 'combined' | 'arr'
+    let mode = 'combined';
     let connected = false;
 
-    // 탭 깜박임 관련
+    let sortMode = 'none';
+
     let blinkTimer = null;
-    let blinkActive = false; // 끊겼을 때만 true
+    let blinkActive = false;
     let blinkOn = false;
 
     const grid = document.getElementById('grid');
@@ -106,16 +138,23 @@
     const addInput = document.getElementById('addInput');
     const addBtn = document.getElementById('addBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const toggleViewBtn = document.getElementById('toggleView');
     const statusEl = document.getElementById('status');
     const logEl = document.getElementById('log');
 
-    // 패널 요소
+    const sortNoneBtn = document.getElementById('sortNone');
+    const sortChangeBtn = document.getElementById('sortChange');
+    const sortVolBtn = document.getElementById('sortVol');
+    const sortVolaBtn = document.getElementById('sortVola');
+
     const connTag = document.getElementById('connTag');
     const modeEl = document.getElementById('mode');
     const lastEl = document.getElementById('last');
     const countEl = document.getElementById('count');
     const backoffEl = document.getElementById('backoff');
     const symListEl = document.getElementById('symbols');
+
+    const intervals = ['15m','1h','4h','1d','1w'];
 
     function log(msg){
       logEl.style.display='block';
@@ -130,33 +169,43 @@
       if(!sym) return '';
       return sym.endsWith('usdt') ? sym : sym + 'usdt';
     }
-    function displayName(sym){
-      return sym.replace('usdt','').toUpperCase() + '/USDT';
-    }
-    function buildStreams(){
-      return coins.map(s => s + '@miniTicker').join('/'); // miniTicker가 trade보다 안정적
-    }
-    function setStatus(msg, err=false){
-      statusEl.textContent = msg;
-      statusEl.className = 'status' + (err?' error':'');
-      log(msg);
-    }
+    function baseAsset(sym){ return sym.replace('usdt','').toUpperCase(); }
+    function displayName(sym){ return baseAsset(sym) + '/USDT'; }
+    function buildStreams(){ return coins.map(s => s + '@miniTicker').join('/'); }
+    function setStatus(msg, err=false){ statusEl.textContent = msg; statusEl.className = 'status' + (err?' error':''); log(msg); }
 
     function ensureCard(sym){
       if(document.getElementById(sym)) return;
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
-        <button class="del" data-sym="${sym}" title="삭제">삭제</button>
-        <div class="sym">${displayName(sym)}</div>
+        <div class="top-row">
+          <div class="sym">${displayName(sym)}</div>
+          <div class="right">
+            <span class="badge" id="badge-${sym}" style="display:none"></span>
+            <button class="del" data-sym="${sym}" title="삭제">삭제</button>
+          </div>
+        </div>
         <div class="price" id="${sym}">
           <span class="dir" id="dir-${sym}"></span>
           <span class="amt" id="amt-${sym}">로딩 중…</span>
         </div>
-        <div class="badge" id="chg-${sym}" style="display:none"></div>
-        <div class="muted" id="note-${sym}"></div>
+        <div class="details" id="det-${sym}">
+          <div class="kv tight"><span class="label">24h 변화율</span><span class="val" id="d-chg-${sym}">-</span></div>
+          <div class="kv"><span class="label">24h 거래량</span><span class="val" id="d-vol-${sym}">-</span></div>
+          <div class="kv"><span class="label">변동성(H-L/종가)</span><span class="val" id="d-vo-${sym}">-</span></div>
+          <div class="spark" id="spkbox-${sym}">
+            <div class="spark-head">
+              <span class="muted">미니차트</span>
+              <div class="tabs" id="tabs-${sym}"></div>
+            </div>
+            <canvas id="spk-${sym}" width="260" height="56"></canvas>
+          </div>
+        </div>
       `;
       grid.appendChild(card);
+      makeSparkTabs(sym);
+      loadSpark(sym, getActiveInterval(sym));
     }
 
     function updatePanel(){
@@ -174,7 +223,36 @@
       if(!dEl) return;
       if(dir>0){ dEl.textContent='▲'; dEl.className='dir up'; }
       else if(dir<0){ dEl.textContent='▼'; dEl.className='dir down'; }
-      // dir==0 은 이전 상태 유지 (변경 없음)
+    }
+
+    function fmtVol(n){
+      const v = parseFloat(n||0);
+      if(v>=1e9) return (v/1e9).toFixed(2)+'B';
+      if(v>=1e6) return (v/1e6).toFixed(2)+'M';
+      if(v>=1e3) return (v/1e3).toFixed(2)+'K';
+      return v.toFixed(2);
+    }
+
+    function updateDetails(sym){
+      const chg = changePct.get(sym);
+      const vol = baseVol.get(sym);
+      const vo  = volaPct.get(sym);
+      const elc = document.getElementById('d-chg-'+sym);
+      const elv = document.getElementById('d-vol-'+sym);
+      const elvo= document.getElementById('d-vo-'+sym);
+      if(elc) elc.textContent = (typeof chg==='number'? chg.toFixed(2)+'%' : '-');
+      if(elv) elv.textContent = (vol!==undefined? fmtVol(vol) : '-');
+      if(elvo) elvo.textContent = (typeof vo==='number'? vo.toFixed(2)+'%' : '-');
+
+      // 10% 이상 변동 배지: 코인 이름 옆(삭제 버튼 앞)
+      const badge = document.getElementById('badge-'+sym);
+      if(badge){
+        if(typeof chg === 'number' && Math.abs(chg) >= 10){
+          badge.style.display = 'inline-block';
+          badge.className = 'badge ' + (chg>0?'up':'down');
+          badge.textContent = `${chg.toFixed(2)}% ${chg>0?'상승':'하락'}`;
+        } else { badge.style.display = 'none'; }
+      }
     }
 
     function updateCard(sym, priceStr, dir){
@@ -188,25 +266,15 @@
       elAmt.textContent = `$${priceStr}`;
       lastPrice.set(sym, priceStr);
       if(dir!==undefined) setDirSymbol(sym, dir);
-
-      const chg = changePct.get(sym);
-      const badge = document.getElementById('chg-'+sym);
-      if(badge){
-        if(typeof chg === 'number' && Math.abs(chg) >= 10){
-          badge.style.display = 'inline-block';
-          badge.className = 'badge ' + (chg>0?'up':'down');
-          badge.textContent = `${chg.toFixed(2)}% ${chg>0?'상승':'하락'}`;
-        } else { badge.style.display = 'none'; }
-      }
+      updateDetails(sym);
     }
 
-    // === 동적 파비콘(탭 아이콘)으로 방향/색상 표현 ===
     function setFaviconSymbol(dir){
       let link = document.querySelector('link[rel="icon"]');
       if(!link){ link = document.createElement('link'); link.rel='icon'; document.head.appendChild(link); }
       const c = document.createElement('canvas'); c.width=128; c.height=128; const ctx=c.getContext('2d');
       ctx.clearRect(0,0,128,128);
-      ctx.fillStyle = '#000000'; ctx.fillRect(0,0,128,128); // 배경 검정
+      ctx.fillStyle = '#000000'; ctx.fillRect(0,0,128,128);
       ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='bold 96px Arial';
       if(dir>0){ ctx.fillStyle = '#00e676'; ctx.fillText('▲',64,78); }
       else if(dir<0){ ctx.fillStyle = '#ff5252'; ctx.fillText('▼',64,78); }
@@ -214,12 +282,11 @@
       link.href = c.toDataURL('image/png');
     }
 
-    // 탭 제목 업데이트 (깜박임 프리픽스 + 방향 기호 포함)
     function updateTitle(sym){
       const p = curPrice.get(sym);
-      const tag = sym.replace('usdt','').toUpperCase();
+      const tag = baseAsset(sym);
       const dir = dirMap.get(sym) || 0;
-      const tri = dir>0?'▲':dir<0?'▼':''; // 변동 없으면 이전값 유지 -> dirMap 사용
+      const tri = dir>0?'▲':dir<0?'▼':'';
       const base = p ? `${tri} $${p} - ${tag}` : `${tri?tri+' ':''}로딩 중... - ${tag}`;
       const prefix = (blinkActive && blinkOn) ? '재연결 중… ' : '';
       document.title = prefix + base;
@@ -232,9 +299,16 @@
           const r = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${sym.toUpperCase()}`);
           if(!r.ok) return; const d = await r.json();
           const pct = parseFloat(d.priceChangePercent);
+          const vol = parseFloat(d.volume);
+          const high= parseFloat(d.highPrice), low=parseFloat(d.lowPrice);
+          const last = parseFloat(curPrice.get(sym) || d.lastPrice || d.prevClosePrice || '0');
+          const vo  = (last>0 && isFinite(high) && isFinite(low)) ? ((high-low)/last*100) : undefined;
           if(!Number.isNaN(pct)) changePct.set(sym, pct);
+          if(!Number.isNaN(vol)) baseVol.set(sym, vol);
+          if(vo!==undefined && !Number.isNaN(vo)) volaPct.set(sym, vo);
         }catch(e){ log(`24h 실패 ${sym}: ${e?.message||e}`); }
       }));
+      applySort();
       coins.forEach(sym=>{ const p = curPrice.get(sym); if(p) updateCard(sym,p,dirMap.get(sym)); });
     }
 
@@ -267,14 +341,14 @@
             const d = payload.data; if(!d||!d.s) return;
             const sym = d.s.toLowerCase();
             const prev = curPrice.get(sym) ?? lastPrice.get(sym);
-            const priceStr = parseFloat(d.c ?? d.p).toFixed(sym==='jasmyusdt'?6:2); // miniTicker.c or trade.p
+            const priceStr = parseFloat(d.c ?? d.p).toFixed(sym==='jasmyusdt'?6:2);
             curPrice.set(sym, priceStr);
             let dir = 0;
             if(prev !== undefined){ const pv=parseFloat(prev), cv=parseFloat(priceStr); dir = cv>pv?1:cv<pv?-1:0; }
             if(dir!==0) dirMap.set(sym, dir);
             updateCard(sym, priceStr, dir===0?undefined:dir);
             if(titleSel.value===sym) updateTitle(sym);
-          } else { // arr mode
+          } else {
             const arr = Array.isArray(payload) ? payload : payload.data;
             if(!Array.isArray(arr)) return;
             for(const it of arr){
@@ -307,7 +381,6 @@
         try{ ws.close(); }catch(_){}
       };
 
-      // 7초 무응답 시 모드 전환
       setTimeout(()=>{
         if(Date.now()-lastMsgTS > 7000){
           mode = (mode==='combined') ? 'arr' : 'combined';
@@ -318,10 +391,21 @@
       }, 7500);
     }
 
-    function rebuildUI(){
+    function applySort(){
+      const arr = [...coins];
+      if(sortMode==='change'){
+        arr.sort((a,b)=> (changePct.get(b)||-Infinity) - (changePct.get(a)||-Infinity));
+      } else if(sortMode==='volume'){
+        arr.sort((a,b)=> (baseVol.get(b)||-Infinity) - (baseVol.get(a)||-Infinity));
+      } else if(sortMode==='vola'){
+        arr.sort((a,b)=> (volaPct.get(b)||-Infinity) - (volaPct.get(a)||-Infinity));
+      } else {
+        arr.sort();
+      }
+      coins = arr;
       const prevSel = titleSel.value;
-      titleSel.innerHTML=''; grid.innerHTML='';
-      coins.sort();
+      titleSel.innerHTML='';
+      grid.innerHTML='';
       coins.forEach(sym=>{
         ensureCard(sym);
         const opt = document.createElement('option');
@@ -329,25 +413,24 @@
         titleSel.appendChild(opt);
       });
       titleSel.value = coins.includes(prevSel) ? prevSel : (coins[0] || '');
-      if(titleSel.value) updateTitle(titleSel.value);
-      updatePanel();
     }
+
+    function setActiveSort(btn){ [sortNoneBtn,sortChangeBtn,sortVolBtn,sortVolaBtn].forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+
+    function rebuildUI(){ applySort(); if(titleSel.value) updateTitle(titleSel.value); updatePanel(); }
 
     function removeSymbol(sym){
       const idx = coins.indexOf(sym);
       if(idx === -1) return;
       coins.splice(idx,1);
-      lastPrice.delete(sym); curPrice.delete(sym); changePct.delete(sym); dirMap.delete(sym);
+      lastPrice.delete(sym); curPrice.delete(sym); changePct.delete(sym); dirMap.delete(sym); baseVol.delete(sym); volaPct.delete(sym);
       const priceEl = document.getElementById(sym);
       if(priceEl){ const card = priceEl.closest('.card'); if(card) card.remove(); }
       if(titleSel.value === sym){
         titleSel.value = coins[0] || '';
         if(titleSel.value) updateTitle(titleSel.value); else document.title = '코인 가격';
       }
-      const prevSel = titleSel.value;
-      titleSel.innerHTML='';
-      coins.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=displayName(s); titleSel.appendChild(o); });
-      titleSel.value = prevSel && coins.includes(prevSel) ? prevSel : (coins[0]||'');
+      applySort();
       connectWS();
       fetch24hChanges();
       updatePanel();
@@ -358,35 +441,83 @@
       let raw = addInput.value; if(!raw) return; addInput.value='';
       const sym = normalize(raw);
       if(coins.includes(sym)) { setStatus(`${displayName(sym)} 이미 추가됨`); return; }
-      coins.push(sym); rebuildUI(); connectWS(); fetch24hChanges();
+      coins.push(sym); applySort(); connectWS(); fetch24hChanges();
       setStatus(`${displayName(sym)} 추가됨`);
     }
 
-    // 이벤트 위임: 삭제 버튼
+    function getActiveInterval(sym){
+      const tabs = document.getElementById('tabs-'+sym);
+      const active = tabs?.querySelector('button.active');
+      return active?.dataset.iv || '1h';
+    }
+    function makeSparkTabs(sym){
+      const tabs = document.getElementById('tabs-'+sym);
+      if(!tabs) return;
+      tabs.innerHTML='';
+      intervals.forEach(iv=>{
+        const b=document.createElement('button');
+        b.textContent = iv; b.dataset.iv=iv; if(iv==='1h') b.classList.add('active');
+        b.onclick = ()=>{ tabs.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); loadSpark(sym, iv); };
+        tabs.appendChild(b);
+      });
+    }
+    async function fetchKlines(sym, iv){
+      const url = `https://api.binance.com/api/v3/klines?symbol=${sym.toUpperCase()}&interval=${iv}&limit=60`;
+      const r = await fetch(url); if(!r.ok) throw new Error('klines fetch failed');
+      const d = await r.json();
+      return d.map(row=>parseFloat(row[4]));
+    }
+    function drawSpark(sym, closes){
+      const canvas = document.getElementById('spk-'+sym); if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0,0,W,H);
+      if(!closes || closes.length<2){ ctx.fillStyle='#555'; ctx.fillText('데이터 부족', 6, 12); return; }
+      const min = Math.min(...closes), max = Math.max(...closes);
+      const dx = W/(closes.length-1);
+      const scale = (v)=>{ if(max===min) return H/2; return H - ((v-min)/(max-min))*(H-6) - 3; };
+      const dir = closes[closes.length-1] - closes[0];
+      ctx.strokeStyle = dir>=0 ? '#00e676' : '#ff5252';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, scale(closes[0]));
+      for(let i=1;i<closes.length;i++) ctx.lineTo(i*dx, scale(closes[i]));
+      ctx.stroke();
+    }
+    async function loadSpark(sym, iv){
+      try{ const closes = await fetchKlines(sym, iv); drawSpark(sym, closes); }
+      catch(e){ log(`스파크 실패 ${sym} ${iv}: ${e?.message||e}`); }
+    }
+
     document.getElementById('grid').addEventListener('click', (e)=>{
       const btn = e.target.closest('.del');
       if(!btn) return;
-      const sym = btn.dataset.sym;
-      if(sym) removeSymbol(sym);
+      const sym = btn.dataset.sym; if(sym) removeSymbol(sym);
     });
 
     (async function init(){
       const set = new Set(initialCoins.map(c=>normalize(c)));
       coins = [...set];
-      // 초기 파비콘은 방향 없음
       setFaviconSymbol(0);
-      rebuildUI();
+      applySort();
       connectWS();
       fetch24hChanges();
       setInterval(fetch24hChanges, 5*60*1000);
-      // 패널 시간 표기 keep-alive
+      setInterval(()=>{ coins.forEach(sym=>{ loadSpark(sym, getActiveInterval(sym)); }); }, 60*1000);
       setInterval(()=>{ lastEl.textContent = new Date().toLocaleTimeString(); }, 2000);
     })();
 
     addBtn.addEventListener('click', addSymbolFromInput);
     addInput.addEventListener('keypress', (e)=>{ if(e.key==='Enter') addSymbolFromInput(); });
-    refreshBtn.addEventListener('click', ()=>{ connectWS(); fetch24hChanges(); });
+    refreshBtn.addEventListener('click', ()=>{ connectWS(); fetch24hChanges(); coins.forEach(sym=>loadSpark(sym, getActiveInterval(sym))); });
     titleSel.addEventListener('change', ()=> updateTitle(titleSel.value));
+
+    toggleViewBtn.addEventListener('click', ()=>{ document.body.classList.toggle('compact'); });
+
+    sortNoneBtn.addEventListener('click', ()=>{ sortMode='none'; setActiveSort(sortNoneBtn); applySort(); });
+    sortChangeBtn.addEventListener('click', ()=>{ sortMode='change'; setActiveSort(sortChangeBtn); applySort(); });
+    sortVolBtn.addEventListener('click', ()=>{ sortMode='volume'; setActiveSort(sortVolBtn); applySort(); });
+    sortVolaBtn.addEventListener('click', ()=>{ sortMode='vola'; setActiveSort(sortVolaBtn); applySort(); });
   </script>
 </body>
 </html>

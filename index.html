@@ -17,7 +17,10 @@
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;max-width:1200px;margin:0 auto}
     .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,.25);position:relative}
     .sym{font-weight:700;margin-bottom:6px;letter-spacing:.3px}
-    .price{font-size:22px;font-weight:800;margin:6px 0}
+    .price{font-size:22px;font-weight:800;margin:6px 0;display:flex;align-items:center;gap:6px}
+    .dir{font-weight:900}
+    .dir.up{color:var(--ok)}
+    .dir.down{color:var(--err)}
     .up{color:var(--ok)}
     .down{color:var(--err)}
     .muted{opacity:.7;font-size:12px}
@@ -84,6 +87,7 @@
     let coins = []; // 소문자 usdt 접미어
     const lastPrice = new Map();
     const curPrice  = new Map();
+    const dirMap    = new Map(); // -1 하락, 0 유지, 1 상승
     const changePct = new Map();
 
     let ws = null;
@@ -145,7 +149,10 @@
       card.innerHTML = `
         <button class="del" data-sym="${sym}" title="삭제">삭제</button>
         <div class="sym">${displayName(sym)}</div>
-        <div class="price" id="${sym}">로딩 중…</div>
+        <div class="price" id="${sym}">
+          <span class="dir" id="dir-${sym}"></span>
+          <span class="amt" id="amt-${sym}">로딩 중…</span>
+        </div>
         <div class="badge" id="chg-${sym}" style="display:none"></div>
         <div class="muted" id="note-${sym}"></div>
       `;
@@ -162,15 +169,25 @@
       coins.forEach(s=>{ const chip = document.createElement('div'); chip.className='chip'; chip.textContent=s.toUpperCase(); symListEl.appendChild(chip); });
     }
 
-    function updateCard(sym, priceStr){
-      const el = document.getElementById(sym);
-      if(!el) return;
+    function setDirSymbol(sym, dir){
+      const dEl = document.getElementById('dir-'+sym);
+      if(!dEl) return;
+      if(dir>0){ dEl.textContent='▲'; dEl.className='dir up'; }
+      else if(dir<0){ dEl.textContent='▼'; dEl.className='dir down'; }
+      // dir==0 은 이전 상태 유지 (변경 없음)
+    }
+
+    function updateCard(sym, priceStr, dir){
+      const elAmt = document.getElementById('amt-'+sym);
+      const priceBox = document.getElementById(sym);
+      if(!elAmt || !priceBox) return;
       const last = lastPrice.get(sym);
       if(last !== undefined){
-        el.className = 'price ' + (parseFloat(priceStr) > parseFloat(last) ? 'up' : parseFloat(priceStr) < parseFloat(last) ? 'down' : '');
-      } else { el.className = 'price'; }
-      el.textContent = `$${priceStr}`;
+        priceBox.className = 'price ' + (parseFloat(priceStr) > parseFloat(last) ? 'up' : parseFloat(priceStr) < parseFloat(last) ? 'down' : '');
+      } else { priceBox.className = 'price'; }
+      elAmt.textContent = `$${priceStr}`;
       lastPrice.set(sym, priceStr);
+      if(dir!==undefined) setDirSymbol(sym, dir);
 
       const chg = changePct.get(sym);
       const badge = document.getElementById('chg-'+sym);
@@ -183,32 +200,30 @@
       }
     }
 
-    // === 동적 파비콘(탭 아이콘)으로 색상 표현 ===
-    function setFaviconColor(hex){
+    // === 동적 파비콘(탭 아이콘)으로 방향/색상 표현 ===
+    function setFaviconSymbol(dir){
       let link = document.querySelector('link[rel="icon"]');
       if(!link){ link = document.createElement('link'); link.rel='icon'; document.head.appendChild(link); }
-      const c = document.createElement('canvas'); c.width=64; c.height=64; const ctx=c.getContext('2d');
-      ctx.clearRect(0,0,64,64);
-      ctx.beginPath(); ctx.arc(32,32,26,0,Math.PI*2);
-      ctx.fillStyle = hex; ctx.fill();
+      const c = document.createElement('canvas'); c.width=128; c.height=128; const ctx=c.getContext('2d');
+      ctx.clearRect(0,0,128,128);
+      ctx.fillStyle = '#000000'; ctx.fillRect(0,0,128,128); // 배경 검정
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='bold 96px Arial';
+      if(dir>0){ ctx.fillStyle = '#00e676'; ctx.fillText('▲',64,78); }
+      else if(dir<0){ ctx.fillStyle = '#ff5252'; ctx.fillText('▼',64,78); }
+      else { ctx.fillStyle = '#000000'; ctx.fillText('•',64,78); }
       link.href = c.toDataURL('image/png');
     }
 
-    // 가격 방향에 따른 파비콘 색상 (탭 제목 글자색은 기술적으로 변경 불가)
-    function updateFaviconByDir(dir){
-      if(dir>0) setFaviconColor('#00e676');
-      else if(dir<0) setFaviconColor('#ff5252');
-      else setFaviconColor('#000000');
-    }
-
-    // 탭 제목 업데이트 (깜박임 프리픽스 적용)
-    function updateTitle(sym, dir=0){
+    // 탭 제목 업데이트 (깜박임 프리픽스 + 방향 기호 포함)
+    function updateTitle(sym){
       const p = curPrice.get(sym);
       const tag = sym.replace('usdt','').toUpperCase();
-      const base = p ? `$${p} - ${tag}` : `로딩 중... - ${tag}`;
+      const dir = dirMap.get(sym) || 0;
+      const tri = dir>0?'▲':dir<0?'▼':''; // 변동 없으면 이전값 유지 -> dirMap 사용
+      const base = p ? `${tri} $${p} - ${tag}` : `${tri?tri+' ':''}로딩 중... - ${tag}`;
       const prefix = (blinkActive && blinkOn) ? '재연결 중… ' : '';
       document.title = prefix + base;
-      updateFaviconByDir(dir);
+      setFaviconSymbol(dir);
     }
 
     async function fetch24hChanges(){
@@ -220,7 +235,7 @@
           if(!Number.isNaN(pct)) changePct.set(sym, pct);
         }catch(e){ log(`24h 실패 ${sym}: ${e?.message||e}`); }
       }));
-      coins.forEach(sym=>{ const p = curPrice.get(sym); if(p) updateCard(sym,p); });
+      coins.forEach(sym=>{ const p = curPrice.get(sym); if(p) updateCard(sym,p,dirMap.get(sym)); });
     }
 
     function startBlink(){
@@ -254,30 +269,24 @@
             const prev = curPrice.get(sym) ?? lastPrice.get(sym);
             const priceStr = parseFloat(d.c ?? d.p).toFixed(sym==='jasmyusdt'?6:2); // miniTicker.c or trade.p
             curPrice.set(sym, priceStr);
-            updateCard(sym, priceStr);
-            if(titleSel.value===sym){
-              let dir = 0;
-              if(prev !== undefined){
-                const pv = parseFloat(prev), cv = parseFloat(priceStr);
-                dir = cv>pv?1:cv<pv?-1:0;
-              }
-              updateTitle(sym, dir);
-            }
+            let dir = 0;
+            if(prev !== undefined){ const pv=parseFloat(prev), cv=parseFloat(priceStr); dir = cv>pv?1:cv<pv?-1:0; }
+            if(dir!==0) dirMap.set(sym, dir);
+            updateCard(sym, priceStr, dir===0?undefined:dir);
+            if(titleSel.value===sym) updateTitle(sym);
           } else { // arr mode
             const arr = Array.isArray(payload) ? payload : payload.data;
             if(!Array.isArray(arr)) return;
             for(const it of arr){
-              const s = it.s?.toLowerCase?.();
-              if(!s || !coins.includes(s)) continue;
+              const s = it.s?.toLowerCase?.(); if(!s || !coins.includes(s)) continue;
               const prev = curPrice.get(s) ?? lastPrice.get(s);
               const priceStr = parseFloat(it.c).toFixed(s==='jasmyusdt'?6:2);
               curPrice.set(s, priceStr);
-              updateCard(s, priceStr);
-              if(titleSel.value===s){
-                let dir = 0;
-                if(prev !== undefined){ const pv=parseFloat(prev), cv=parseFloat(priceStr); dir = cv>pv?1:cv<pv?-1:0; }
-                updateTitle(s, dir);
-              }
+              let dir = 0;
+              if(prev !== undefined){ const pv=parseFloat(prev), cv=parseFloat(priceStr); dir = cv>pv?1:cv<pv?-1:0; }
+              if(dir!==0) dirMap.set(s, dir);
+              updateCard(s, priceStr, dir===0?undefined:dir);
+              if(titleSel.value===s) updateTitle(s);
             }
           }
           lastEl.textContent = new Date().toLocaleTimeString();
@@ -328,7 +337,7 @@
       const idx = coins.indexOf(sym);
       if(idx === -1) return;
       coins.splice(idx,1);
-      lastPrice.delete(sym); curPrice.delete(sym); changePct.delete(sym);
+      lastPrice.delete(sym); curPrice.delete(sym); changePct.delete(sym); dirMap.delete(sym);
       const priceEl = document.getElementById(sym);
       if(priceEl){ const card = priceEl.closest('.card'); if(card) card.remove(); }
       if(titleSel.value === sym){
@@ -364,8 +373,8 @@
     (async function init(){
       const set = new Set(initialCoins.map(c=>normalize(c)));
       coins = [...set];
-      // 초기 파비콘을 검정으로 설정
-      setFaviconColor('#000000');
+      // 초기 파비콘은 방향 없음
+      setFaviconSymbol(0);
       rebuildUI();
       connectWS();
       fetch24hChanges();

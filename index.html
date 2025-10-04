@@ -247,9 +247,10 @@
       const elc = document.getElementById('d-chg-'+sym);
       const elv = document.getElementById('d-vol-'+sym);
       const elvo= document.getElementById('d-vo-'+sym);
-      if(elc) elc.textContent = (typeof chg==='number'? chg.toFixed(2)+'%' : '-');
-      if(elv) elv.textContent = (vol!==undefined? '$'+fmtVol(vol) : '-');
-      if(elvo) elvo.textContent = (typeof vo==='number'? vo.toFixed(2)+'%' : '-');
+      // 변화율: 부호(+/-) 포함
+      if (elc) elc.textContent = (typeof chg === 'number' ? (chg > 0 ? '+' : '') + chg.toFixed(2) + '%' : '-');
+      if (elv) elv.textContent = (vol!==undefined? '$'+fmtVol(vol) : '-');
+      if (elvo) elvo.textContent = (typeof vo==='number'? vo.toFixed(2)+'%' : '-');
 
       // 10% 이상 변동 배지: 코인 이름 옆(삭제 버튼 앞)
       const badge = document.getElementById('badge-'+sym);
@@ -316,7 +317,12 @@
         }catch(e){ log(`24h 실패 ${sym}: ${e?.message||e}`); }
       }));
       applySort();
-      coins.forEach(sym=>{ const p = curPrice.get(sym); if(p) updateCard(sym,p,dirMap.get(sym)); });
+      // 실시간 가격이 없더라도 24h 정보로 배지/변화율 먼저 표기
+      coins.forEach(sym=>{
+        const p = curPrice.get(sym);
+        if(p) updateCard(sym, p, dirMap.get(sym));
+        else updateDetails(sym);
+      });
     }
 
     function startBlink(){

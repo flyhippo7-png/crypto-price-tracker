@@ -92,6 +92,11 @@
     let mode = 'combined'; // 'combined' | 'arr'
     let connected = false;
 
+    // 탭 깜박임 관련
+    let blinkTimer = null;
+    let blinkActive = false; // 끊겼을 때만 true
+    let blinkOn = false;
+
     const grid = document.getElementById('grid');
     const titleSel = document.getElementById('titleCoin');
     const addInput = document.getElementById('addInput');
@@ -148,13 +153,11 @@
     }
 
     function updatePanel(){
-      // 연결 태그
       connTag.textContent = connected ? '연결됨' : '끊김';
       connTag.className = 'tag ' + (connected ? 'ok' : 'err');
       modeEl.textContent = mode;
       countEl.textContent = coins.length + '개';
       backoffEl.textContent = (reconnectDelay/1000).toFixed(1) + 's';
-      // 심볼 칩
       symListEl.innerHTML = '';
       coins.forEach(s=>{ const chip = document.createElement('div'); chip.className='chip'; chip.textContent=s.toUpperCase(); symListEl.appendChild(chip); });
     }
@@ -180,11 +183,32 @@
       }
     }
 
-    function dot(){ return connected ? '🟢' : '🔴'; }
-    function updateTitle(sym){
+    // === 동적 파비콘(탭 아이콘)으로 색상 표현 ===
+    function setFaviconColor(hex){
+      let link = document.querySelector('link[rel="icon"]');
+      if(!link){ link = document.createElement('link'); link.rel='icon'; document.head.appendChild(link); }
+      const c = document.createElement('canvas'); c.width=64; c.height=64; const ctx=c.getContext('2d');
+      ctx.clearRect(0,0,64,64);
+      ctx.beginPath(); ctx.arc(32,32,26,0,Math.PI*2);
+      ctx.fillStyle = hex; ctx.fill();
+      link.href = c.toDataURL('image/png');
+    }
+
+    // 가격 방향에 따른 파비콘 색상 (탭 제목 글자색은 기술적으로 변경 불가)
+    function updateFaviconByDir(dir){
+      if(dir>0) setFaviconColor('#00e676');
+      else if(dir<0) setFaviconColor('#ff5252');
+      else setFaviconColor('#000000');
+    }
+
+    // 탭 제목 업데이트 (깜박임 프리픽스 적용)
+    function updateTitle(sym, dir=0){
       const p = curPrice.get(sym);
       const tag = sym.replace('usdt','').toUpperCase();
-      document.title = p ? `${dot()} $${p} - ${tag}` : `${dot()} 로딩 중... - ${tag}`;
+      const base = p ? `$${p} - ${tag}` : `로딩 중... - ${tag}`;
+      const prefix = (blinkActive && blinkOn) ? '재연결 중… ' : '';
+      document.title = prefix + base;
+      updateFaviconByDir(dir);
     }
 
     async function fetch24hChanges(){
@@ -199,6 +223,14 @@
       coins.forEach(sym=>{ const p = curPrice.get(sym); if(p) updateCard(sym,p); });
     }
 
+    function startBlink(){
+      if(blinkTimer) return; blinkActive = true; blinkOn = true;
+      blinkTimer = setInterval(()=>{ blinkOn = !blinkOn; if(titleSel.value) updateTitle(titleSel.value); }, 600);
+    }
+    function stopBlink(){
+      if(!blinkTimer) return; clearInterval(blinkTimer); blinkTimer=null; blinkActive=false; blinkOn=false; if(titleSel.value) updateTitle(titleSel.value);
+    }
+
     function connectWS(){
       if(ws){ try{ ws.close(); }catch(_){} ws=null; }
       lastMsgTS = Date.now();
@@ -209,30 +241,43 @@
       setStatus(`실시간 연결 중… (mode=${mode})`);
       ws = new WebSocket(url);
 
-      ws.onopen = ()=>{ connected = true; setStatus('실시간 연결 완료'); reconnectDelay=1000; updatePanel(); updateTitle(titleSel.value); };
+      ws.onopen = ()=>{ connected = true; stopBlink(); setStatus('실시간 연결 완료'); reconnectDelay=1000; updatePanel(); if(titleSel.value) updateTitle(titleSel.value); };
 
       ws.onmessage = (evt)=>{
         lastMsgTS = Date.now();
-        if(!connected){ connected=true; updatePanel(); updateTitle(titleSel.value); }
+        if(!connected){ connected=true; stopBlink(); updatePanel(); }
         try{
           const payload = JSON.parse(evt.data);
           if(mode==='combined'){
             const d = payload.data; if(!d||!d.s) return;
             const sym = d.s.toLowerCase();
+            const prev = curPrice.get(sym) ?? lastPrice.get(sym);
             const priceStr = parseFloat(d.c ?? d.p).toFixed(sym==='jasmyusdt'?6:2); // miniTicker.c or trade.p
             curPrice.set(sym, priceStr);
             updateCard(sym, priceStr);
-            if(titleSel.value===sym) updateTitle(sym);
-          } else { // arr mode: 배열 전체
+            if(titleSel.value===sym){
+              let dir = 0;
+              if(prev !== undefined){
+                const pv = parseFloat(prev), cv = parseFloat(priceStr);
+                dir = cv>pv?1:cv<pv?-1:0;
+              }
+              updateTitle(sym, dir);
+            }
+          } else { // arr mode
             const arr = Array.isArray(payload) ? payload : payload.data;
             if(!Array.isArray(arr)) return;
             for(const it of arr){
               const s = it.s?.toLowerCase?.();
               if(!s || !coins.includes(s)) continue;
+              const prev = curPrice.get(s) ?? lastPrice.get(s);
               const priceStr = parseFloat(it.c).toFixed(s==='jasmyusdt'?6:2);
               curPrice.set(s, priceStr);
               updateCard(s, priceStr);
-              if(titleSel.value===s) updateTitle(s);
+              if(titleSel.value===s){
+                let dir = 0;
+                if(prev !== undefined){ const pv=parseFloat(prev), cv=parseFloat(priceStr); dir = cv>pv?1:cv<pv?-1:0; }
+                updateTitle(s, dir);
+              }
             }
           }
           lastEl.textContent = new Date().toLocaleTimeString();
@@ -240,20 +285,20 @@
       };
 
       ws.onclose = ()=>{
-        connected = false; updatePanel(); updateTitle(titleSel.value);
+        connected = false; startBlink(); updatePanel(); if(titleSel.value) updateTitle(titleSel.value);
         setStatus('연결 끊김 – 재시도 대기…');
         setTimeout(()=>{ connectWS(); }, reconnectDelay);
         reconnectDelay = Math.min(reconnectDelay*2, 30000);
       };
 
       ws.onerror = (e)=>{
-        connected = false; updatePanel(); updateTitle(titleSel.value);
+        connected = false; startBlink(); updatePanel(); if(titleSel.value) updateTitle(titleSel.value);
         setStatus('실시간 연결 오류', true);
         log('WS error: '+(e?.message||e));
         try{ ws.close(); }catch(_){}
       };
 
-      // 7초 동안 메시지가 없으면 모드 전환
+      // 7초 무응답 시 모드 전환
       setTimeout(()=>{
         if(Date.now()-lastMsgTS > 7000){
           mode = (mode==='combined') ? 'arr' : 'combined';
@@ -319,6 +364,8 @@
     (async function init(){
       const set = new Set(initialCoins.map(c=>normalize(c)));
       coins = [...set];
+      // 초기 파비콘을 검정으로 설정
+      setFaviconColor('#000000');
       rebuildUI();
       connectWS();
       fetch24hChanges();

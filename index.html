@@ -16,6 +16,9 @@
     .controls input{min-width:160px}
     .sort-group{display:flex;gap:6px}
     .btn{cursor:pointer}
+    .btn-primary{background:#2563eb !important;color:#fff !important;border:1px solid #3b82f6;box-shadow:0 6px 16px rgba(37,99,235,.35)}
+    .btn-primary:hover{filter:brightness(1.05)}
+    .btn-primary.active{background:#1d4ed8 !important;border-color:#1e40af;}
     .btn.active{outline:2px solid var(--ok)}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;max-width:1400px;margin:0 auto;align-items:start}
     .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 4px 12px rgba(0,0,0,.25);position:relative}
@@ -70,7 +73,7 @@
     @media(max-width:960px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}}
   </style>
 </head>
-<body>
+<body class="compact">
   <div class="layout">
     <header>
       <h1>바이낸스 실시간 코인 가격</h1>
@@ -80,11 +83,11 @@
         <input id="addInput" placeholder="추가할 코인 (예: ADA 또는 ADAUSDT)" />
         <button id="addBtn" class="btn">코인 추가</button>
         <button id="refreshBtn" class="btn">연결 재시도</button>
-        <button id="toggleView" class="btn">상세보기 토글</button>
+        <button id="toggleView" class="btn btn-primary">상세보기 모드</button>
         <div class="sort-group">
           <button class="btn" id="sortNone">기본</button>
           <button class="btn" id="sortChange">상승률 순</button>
-          <button class="btn" id="sortVol">거래량 순</button>
+          <button class="btn" id=\"sortVol\">거래대금 순</button>
           <button class="btn" id="sortVola">변동성 순</button>
         </div>
       </div>
@@ -110,7 +113,7 @@
 
   <script>
     const initialCoins = [
-      'A','ACM','ALICE','ALGO','APT','ASTR','BNB','BTC','CETUS','CRV','DYDX','DUSK','EIGEN','ETH','FIDA','FIL','FLOW','GMT','ICP','ICX','JASMY','NEAR','NEO','NMR','OG','POL','POWR','PUNDIX','QI','QNT','QTUM','RARE','RDNT','REI','SOL','T','TIA','WOO','XEC','XVG','YGG','ZEN','ZEC'
+      'A','ACM','ALICE','ALGO','APT','ASTR','BNB','BTC','CETUS','CFX','COMP','CRV','DYDX','DUSK','EIGEN','ETH','FIDA','FIL','FLOW','GMT','ICP','ICX','JASMY','NEAR','NEO','NMR','OG','ORCA','PHA','POL','POWR','PUNDIX','QI','QNT','QTUM','RARE','RDNT','REI','SOL','T','TIA','WOO','XEC','XVG','YGG','ZEN','ZEC','BMT'
     ];
 
     let coins = [];
@@ -192,7 +195,7 @@
         </div>
         <div class="details" id="det-${sym}">
           <div class="kv tight"><span class="label">24h 변화율</span><span class="val" id="d-chg-${sym}">-</span></div>
-          <div class="kv"><span class="label">24h 거래량</span><span class="val" id="d-vol-${sym}">-</span></div>
+          <div class="kv"><span class="label">24h 거래대금(USDT)</span><span class="val" id="d-vol-${sym}">-</span></div>
           <div class="kv"><span class="label">변동성(H-L/종가)</span><span class="val" id="d-vo-${sym}">-</span></div>
           <div class="spark" id="spkbox-${sym}">
             <div class="spark-head">
@@ -227,6 +230,7 @@
 
     function fmtVol(n){
       const v = parseFloat(n||0);
+      if(v>=1e12) return (v/1e12).toFixed(2)+'T';
       if(v>=1e9) return (v/1e9).toFixed(2)+'B';
       if(v>=1e6) return (v/1e6).toFixed(2)+'M';
       if(v>=1e3) return (v/1e3).toFixed(2)+'K';
@@ -241,7 +245,7 @@
       const elv = document.getElementById('d-vol-'+sym);
       const elvo= document.getElementById('d-vo-'+sym);
       if(elc) elc.textContent = (typeof chg==='number'? chg.toFixed(2)+'%' : '-');
-      if(elv) elv.textContent = (vol!==undefined? fmtVol(vol) : '-');
+      if(elv) elv.textContent = (vol!==undefined? '$'+fmtVol(vol) : '-');
       if(elvo) elvo.textContent = (typeof vo==='number'? vo.toFixed(2)+'%' : '-');
 
       // 10% 이상 변동 배지: 코인 이름 옆(삭제 버튼 앞)
@@ -299,7 +303,7 @@
           const r = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${sym.toUpperCase()}`);
           if(!r.ok) return; const d = await r.json();
           const pct = parseFloat(d.priceChangePercent);
-          const vol = parseFloat(d.volume);
+          const vol = parseFloat(d.quoteVolume);
           const high= parseFloat(d.highPrice), low=parseFloat(d.lowPrice);
           const last = parseFloat(curPrice.get(sym) || d.lastPrice || d.prevClosePrice || '0');
           const vo  = (last>0 && isFinite(high) && isFinite(low)) ? ((high-low)/last*100) : undefined;
@@ -340,7 +344,7 @@
           if(mode==='combined'){
             const d = payload.data; if(!d||!d.s) return;
             const sym = d.s.toLowerCase();
-            const prev = curPrice.get(sym) ?? lastPrice.get(sym);
+            const prev = curPrice.has(sym) ? curPrice.get(sym) : lastPrice.get(sym);
             const priceStr = parseFloat(d.c ?? d.p).toFixed(sym==='jasmyusdt'?6:2);
             curPrice.set(sym, priceStr);
             let dir = 0;
@@ -349,11 +353,10 @@
             updateCard(sym, priceStr, dir===0?undefined:dir);
             if(titleSel.value===sym) updateTitle(sym);
           } else {
-            const arr = Array.isArray(payload) ? payload : payload.data;
-            if(!Array.isArray(arr)) return;
+            let arr; if (Array.isArray(payload)) { arr = payload; } else if (payload && Array.isArray(payload.data)) { arr = payload.data; } else { return; }
             for(const it of arr){
-              const s = it.s?.toLowerCase?.(); if(!s || !coins.includes(s)) continue;
-              const prev = curPrice.get(s) ?? lastPrice.get(s);
+              const s = (it && it.s) ? String(it.s).toLowerCase() : null; if(!s || !coins.includes(s)) continue;
+              const prev = curPrice.has(s) ? curPrice.get(s) : lastPrice.get(s);
               const priceStr = parseFloat(it.c).toFixed(s==='jasmyusdt'?6:2);
               curPrice.set(s, priceStr);
               let dir = 0;
@@ -392,10 +395,57 @@
     }
 
     function applySort(){
-      const arr = [...coins];
+      const arr = coins.slice();
       if(sortMode==='change'){
-        arr.sort((a,b)=> (changePct.get(b)||-Infinity) - (changePct.get(a)||-Infinity));
+        arr.sort((a,b)=> (changePct.get(b) ?? -Infinity) - (changePct.get(a) ?? -Infinity));
       } else if(sortMode==='volume'){
+        arr.sort((a,b)=> (baseVol.get(b) ?? -Infinity) - (baseVol.get(a) ?? -Infinity));
+      } else if(sortMode==='vola'){
+        arr.sort((a,b)=> (volaPct.get(b) ?? -Infinity) - (volaPct.get(a) ?? -Infinity));
+      } else {
+        arr.sort();
+      }
+      coins = arr;
+
+      const frag = document.createDocumentFragment();
+      const prevSel = titleSel.value;
+      titleSel.innerHTML='';
+      for(let i=0;i<coins.length;i++){
+        const sym = coins[i];
+        var priceEl = document.getElementById(sym);
+        var card = priceEl ? priceEl.closest('.card') : null;
+        if(!card){ ensureCard(sym); priceEl = document.getElementById(sym); card = priceEl ? priceEl.closest('.card') : null; }
+        if(card) frag.appendChild(card);
+        const opt = document.createElement('option'); opt.value=sym; opt.textContent=displayName(sym); titleSel.appendChild(opt);
+      }
+      grid.innerHTML='';
+      grid.appendChild(frag);
+
+      titleSel.value = coins.indexOf(prevSel) !== -1 ? prevSel : (coins[0] || '');
+      grid.style.display='none'; void grid.offsetHeight; grid.style.display='grid';
+    } else if(sortMode==='volume'){
+        arr.sort((a,b)=> (baseVol.get(b) ?? -Infinity) - (baseVol.get(a) ?? -Infinity));
+      } else if(sortMode==='vola'){
+        arr.sort((a,b)=> (volaPct.get(b) ?? -Infinity) - (volaPct.get(a) ?? -Infinity));
+      } else {
+        arr.sort();
+      }
+      coins = arr;
+      const frag = document.createDocumentFragment();
+      titleSel.innerHTML='';
+      for(const sym of coins){
+        let card = document.getElementById(sym)?.closest('.card');
+        if(!card){ ensureCard(sym); card = document.getElementById(sym)?.closest('.card'); }
+        if(card) frag.appendChild(card);
+        const opt = document.createElement('option');
+        opt.value=sym; opt.textContent=displayName(sym); titleSel.appendChild(opt);
+      }
+      grid.innerHTML='';
+      grid.appendChild(frag);
+      const prevSel = titleSel.value;
+      titleSel.value = coins.includes(prevSel) ? prevSel : (coins[0] || '');
+      grid.style.display='none'; void grid.offsetHeight; grid.style.display='grid';
+    } else if(sortMode==='volume'){
         arr.sort((a,b)=> (baseVol.get(b)||-Infinity) - (baseVol.get(a)||-Infinity));
       } else if(sortMode==='vola'){
         arr.sort((a,b)=> (volaPct.get(b)||-Infinity) - (volaPct.get(a)||-Infinity));
@@ -447,8 +497,8 @@
 
     function getActiveInterval(sym){
       const tabs = document.getElementById('tabs-'+sym);
-      const active = tabs?.querySelector('button.active');
-      return active?.dataset.iv || '1h';
+      const active = tabs ? tabs.querySelector('button.active') : null;
+      return (active && active.dataset && active.dataset.iv) ? active.dataset.iv : '1h';
     }
     function makeSparkTabs(sym){
       const tabs = document.getElementById('tabs-'+sym);
@@ -512,12 +562,16 @@
     refreshBtn.addEventListener('click', ()=>{ connectWS(); fetch24hChanges(); coins.forEach(sym=>loadSpark(sym, getActiveInterval(sym))); });
     titleSel.addEventListener('change', ()=> updateTitle(titleSel.value));
 
-    toggleViewBtn.addEventListener('click', ()=>{ document.body.classList.toggle('compact'); });
+    toggleViewBtn.addEventListener('click', ()=>{
+      const isCompact = document.body.classList.toggle('compact');
+      if(isCompact){ toggleViewBtn.classList.remove('active'); }
+      else { toggleViewBtn.classList.add('active'); }
+    });
 
     sortNoneBtn.addEventListener('click', ()=>{ sortMode='none'; setActiveSort(sortNoneBtn); applySort(); });
-    sortChangeBtn.addEventListener('click', ()=>{ sortMode='change'; setActiveSort(sortChangeBtn); applySort(); });
-    sortVolBtn.addEventListener('click', ()=>{ sortMode='volume'; setActiveSort(sortVolBtn); applySort(); });
-    sortVolaBtn.addEventListener('click', ()=>{ sortMode='vola'; setActiveSort(sortVolaBtn); applySort(); });
+    sortChangeBtn.addEventListener('click', async ()=>{ sortMode='change'; setActiveSort(sortChangeBtn); await fetch24hChanges(); applySort(); });
+    sortVolBtn.addEventListener('click', async ()=>{ sortMode='volume'; setActiveSort(sortVolBtn); await fetch24hChanges(); applySort(); });
+    sortVolaBtn.addEventListener('click', async ()=>{ sortMode='vola'; setActiveSort(sortVolaBtn); await fetch24hChanges(); applySort(); }); applySort(); });
   </script>
 </body>
 </html>

@@ -17,6 +17,11 @@
     .sort-group{display:flex;gap:6px}
     .btn{cursor:pointer}
     .btn.active{outline:2px solid var(--ok)}
+    /* 강조 버튼 스타일 */
+    .btn-primary{background:#2563eb !important;color:#fff !important;border:1px solid #3b82f6;box-shadow:0 6px 16px rgba(37,99,235,.35)}
+    .btn-primary:hover{filter:brightness(1.05)}
+    .btn-primary.active{background:#1d4ed8 !important;border-color:#1e40af;}
+
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;max-width:1400px;margin:0 auto;align-items:start}
     .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 4px 12px rgba(0,0,0,.25);position:relative}
 
@@ -46,7 +51,7 @@
     .kv{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .kv .label{opacity:.85}
     .kv .val{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .kv.tight{gap:6px} /* 24h 변화율은 라벨-값 간격 좁게 */
+    .kv.tight{gap:6px}
 
     .spark{margin-top:8px;background:#11151d;border:1px solid var(--border);border-radius:8px;padding:6px}
     .spark canvas{width:100%;height:56px}
@@ -70,7 +75,7 @@
     @media(max-width:960px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}}
   </style>
 </head>
-<body>
+<body class="compact">
   <div class="layout">
     <header>
       <h1>바이낸스 실시간 코인 가격</h1>
@@ -80,11 +85,11 @@
         <input id="addInput" placeholder="추가할 코인 (예: ADA 또는 ADAUSDT)" />
         <button id="addBtn" class="btn">코인 추가</button>
         <button id="refreshBtn" class="btn">연결 재시도</button>
-        <button id="toggleView" class="btn">상세보기 토글</button>
+        <button id="toggleView" class="btn btn-primary">상세보기 모드</button>
         <div class="sort-group">
           <button class="btn" id="sortNone">기본</button>
           <button class="btn" id="sortChange">상승률 순</button>
-          <button class="btn" id=\"sortVol\">거래대금 순</button>
+          <button class="btn" id="sortVol">거래대금 순</button>
           <button class="btn" id="sortVola">변동성 순</button>
         </div>
       </div>
@@ -110,7 +115,8 @@
 
   <script>
     const initialCoins = [
-      'A','ACM','ALICE','ALGO','APT','ASTR','BNB','BTC','CETUS','CRV','DYDX','DUSK','EIGEN','ETH','FIDA','FIL','FLOW','GMT','ICP','ICX','JASMY','NEAR','NEO','NMR','OG','POL','POWR','PUNDIX','QI','QNT','QTUM','RARE','RDNT','REI','SOL','T','TIA','WOO','XEC','XVG','YGG','ZEN','ZEC'
+      'A','ACM','ALICE','ALGO','APT','ASTR','BNB','BTC','CETUS','CRV','DYDX','DUSK','EIGEN','ETH','FIDA','FIL','FLOW','GMT','ICP','ICX','JASMY','NEAR','NEO','NMR','OG','POL','POWR','PUNDIX','QI','QNT','QTUM','RARE','RDNT','REI','SOL','T','TIA','WOO','XEC','XVG','YGG','ZEN','ZEC',
+      'COMP','BMT','PHA','ORCA','CFX'
     ];
 
     let coins = [];
@@ -501,6 +507,7 @@
       coins = [...set];
       setFaviconSymbol(0);
       applySort();
+      if(titleSel.value) updateTitle(titleSel.value);
       connectWS();
       fetch24hChanges();
       setInterval(fetch24hChanges, 5*60*1000);
@@ -513,7 +520,12 @@
     refreshBtn.addEventListener('click', ()=>{ connectWS(); fetch24hChanges(); coins.forEach(sym=>loadSpark(sym, getActiveInterval(sym))); });
     titleSel.addEventListener('change', ()=> updateTitle(titleSel.value));
 
-    toggleViewBtn.addEventListener('click', ()=>{ document.body.classList.toggle('compact'); });
+    // 상세보기 모드 버튼: 시각 피드백
+    toggleViewBtn.addEventListener('click', ()=>{
+      const compact = document.body.classList.toggle('compact');
+      if(compact){ toggleViewBtn.classList.remove('active'); }
+      else { toggleViewBtn.classList.add('active'); }
+    });
 
     sortNoneBtn.addEventListener('click', ()=>{ sortMode='none'; setActiveSort(sortNoneBtn); applySort(); });
     sortChangeBtn.addEventListener('click', ()=>{ sortMode='change'; setActiveSort(sortChangeBtn); applySort(); });

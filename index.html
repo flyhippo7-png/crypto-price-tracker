@@ -255,6 +255,7 @@
     const DEFAULT_TITLE = "Kraken 코인 시세 감시";
     const MAX_COINS = 200;
     const KRAKEN_BASE = "https://api.kraken.com/0/public";
+    const BLINK_THRESHOLD_PERCENT = 1;
 
     let watchlist = [];
     let assetPairs = {};
@@ -264,6 +265,10 @@
     let refreshInterval = 10000;
     let isLoading = false;
     let selectedTitlePair = localStorage.getItem(SELECTED_TITLE_KEY) || "";
+    let previousSelectedPrice = null;
+    let titleBlinkTimer = null;
+    let titleBlinkToggle = false;
+    let titleBlinkActive = false;
 
     const defaultCoins = [
       { input: "BTC", pair: "XBT/USD", altname: "XBTUSD", label: "BTC/USD" },
@@ -322,16 +327,79 @@
     function updateBrowserTitle() {
       const item = watchlist.find(x => x.pair === selectedTitlePair);
       if (!item) {
+        stopTitleBlink();
         document.title = DEFAULT_TITLE;
         return;
       }
+
       const p = priceData.get(item.pair);
-      document.title = p ? `${formatPrice(p.last)}-${item.label}` : `조회 전-${item.label}`;
+      const titleText = p ? `${formatPrice(p.last)}-${item.label}` : `조회 전-${item.label}`;
+
+      if (!titleBlinkActive) {
+        document.title = titleText;
+      }
+
       const selected = document.getElementById("selectedTitleText");
       if (selected) selected.textContent = getSelectedTitleLabel();
     }
 
+    function startTitleBlink(titleText) {
+      stopTitleBlink();
+      titleBlinkActive = true;
+      titleBlinkToggle = false;
+
+      titleBlinkTimer = setInterval(() => {
+        titleBlinkToggle = !titleBlinkToggle;
+        document.title = titleBlinkToggle ? `⚠ ${titleText}` : DEFAULT_TITLE;
+      }, 700);
+    }
+
+    function stopTitleBlink() {
+      titleBlinkActive = false;
+      titleBlinkToggle = false;
+
+      if (titleBlinkTimer) {
+        clearInterval(titleBlinkTimer);
+        titleBlinkTimer = null;
+      }
+    }
+
+    function checkSelectedPriceBlink() {
+      const item = watchlist.find(x => x.pair === selectedTitlePair);
+      if (!item) {
+        previousSelectedPrice = null;
+        stopTitleBlink();
+        document.title = DEFAULT_TITLE;
+        return;
+      }
+
+      const p = priceData.get(item.pair);
+      if (!p || !Number.isFinite(p.last)) return;
+
+      const currentPrice = p.last;
+      const titleText = `${formatPrice(currentPrice)}-${item.label}`;
+
+      if (previousSelectedPrice !== null && previousSelectedPrice > 0) {
+        const diffPercent = Math.abs((currentPrice - previousSelectedPrice) / previousSelectedPrice) * 100;
+
+        if (diffPercent >= BLINK_THRESHOLD_PERCENT) {
+          startTitleBlink(titleText);
+        } else {
+          stopTitleBlink();
+          document.title = titleText;
+        }
+      } else {
+        stopTitleBlink();
+        document.title = titleText;
+      }
+
+      previousSelectedPrice = currentPrice;
+    }
+
     function selectTitleCoin(pair) {
+      stopTitleBlink();
+      previousSelectedPrice = null;
+
       if (selectedTitlePair === pair) {
         selectedTitlePair = "";
         localStorage.removeItem(SELECTED_TITLE_KEY);
@@ -479,6 +547,12 @@
     function removeCoin(pair) {
       watchlist = watchlist.filter(item => item.pair !== pair);
       priceData.delete(pair);
+      if (selectedTitlePair === pair) {
+        selectedTitlePair = "";
+        previousSelectedPrice = null;
+        stopTitleBlink();
+        localStorage.removeItem(SELECTED_TITLE_KEY);
+      }
       saveWatchlist();
       refreshNow();
     }
@@ -487,6 +561,10 @@
       if (!confirm("등록된 코인을 모두 삭제하시겠습니까?")) return;
       watchlist = [];
       priceData.clear();
+      selectedTitlePair = "";
+      previousSelectedPrice = null;
+      stopTitleBlink();
+      localStorage.removeItem(SELECTED_TITLE_KEY);
       saveWatchlist();
     }
 
@@ -539,7 +617,7 @@
         setLastUpdate();
         setStatus("정상 조회", "ok");
         render();
-        updateBrowserTitle();
+        checkSelectedPriceBlink();
       } catch (error) {
         console.error(error);
         setStatus("조회 실패", "bad");
@@ -687,6 +765,8 @@
         normalizeSavedWatchlist();
         if (selectedTitlePair && !watchlist.some(item => item.pair === selectedTitlePair)) {
           selectedTitlePair = "";
+          previousSelectedPrice = null;
+          stopTitleBlink();
           localStorage.removeItem(SELECTED_TITLE_KEY);
         }
         render();

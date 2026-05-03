@@ -230,6 +230,14 @@
       <div class="left-tools">
         <span class="badge">자동갱신: <b id="intervalText">10초</b></span>
         <span class="badge">최대 등록: <b>200개</b></span>
+        <span class="badge">깜박임 기준:
+          <select id="blinkThresholdSelect" onchange="changeBlinkThreshold()" style="height:28px; margin-left:6px; padding:0 6px;">
+            <option value="0.5">0.5%</option>
+            <option value="1" selected>1%</option>
+            <option value="2">2%</option>
+            <option value="5">5%</option>
+          </select>
+        </span>
       </div>
       <div class="right-tools">
         <select id="intervalSelect" onchange="changeInterval()">
@@ -252,10 +260,10 @@
   <script>
     const STORAGE_KEY = "kraken_watchlist_v1";
     const SELECTED_TITLE_KEY = "kraken_selected_title_pair_v1";
+    const BLINK_THRESHOLD_KEY = "kraken_blink_threshold_percent_v1";
     const DEFAULT_TITLE = "Kraken 코인 시세 감시";
     const MAX_COINS = 200;
     const KRAKEN_BASE = "https://api.kraken.com/0/public";
-    const BLINK_THRESHOLD_PERCENT = 1;
 
     let watchlist = [];
     let assetPairs = {};
@@ -269,6 +277,7 @@
     let titleBlinkTimer = null;
     let titleBlinkToggle = false;
     let titleBlinkActive = false;
+    let blinkThresholdPercent = Number(localStorage.getItem(BLINK_THRESHOLD_KEY)) || 1;
 
     const defaultCoins = [
       { input: "BTC", pair: "XBT/USD", altname: "XBTUSD", label: "BTC/USD" },
@@ -382,7 +391,7 @@
       if (previousSelectedPrice !== null && previousSelectedPrice > 0) {
         const diffPercent = Math.abs((currentPrice - previousSelectedPrice) / previousSelectedPrice) * 100;
 
-        if (diffPercent >= BLINK_THRESHOLD_PERCENT) {
+        if (diffPercent >= blinkThresholdPercent) {
           startTitleBlink(titleText);
         } else {
           stopTitleBlink();
@@ -726,6 +735,16 @@
       startTimer();
     }
 
+    function changeBlinkThreshold() {
+      const select = document.getElementById("blinkThresholdSelect");
+      blinkThresholdPercent = Number(select.value);
+      localStorage.setItem(BLINK_THRESHOLD_KEY, String(blinkThresholdPercent));
+
+      // 기준 변경 시 기존 깜박임은 일단 중지하고 다음 가격 갱신부터 새 기준 적용
+      stopTitleBlink();
+      updateBrowserTitle();
+    }
+
     function startTimer() {
       if (refreshTimer) clearInterval(refreshTimer);
       refreshTimer = setInterval(refreshNow, refreshInterval);
@@ -757,6 +776,9 @@
     }
 
     async function init() {
+      const thresholdSelect = document.getElementById("blinkThresholdSelect");
+      if (thresholdSelect) thresholdSelect.value = String(blinkThresholdPercent);
+
       loadWatchlist();
       render();
       try {

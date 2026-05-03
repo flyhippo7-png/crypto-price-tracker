@@ -278,6 +278,7 @@
     let titleBlinkToggle = false;
     let titleBlinkActive = false;
     let blinkThresholdPercent = Number(localStorage.getItem(BLINK_THRESHOLD_KEY)) || 1;
+    let priceAlertActive = false;
 
     const defaultCoins = [
       { input: "BTC", pair: "XBT/USD", altname: "XBTUSD", label: "BTC/USD" },
@@ -344,29 +345,20 @@
       const p = priceData.get(item.pair);
       const titleText = p ? `${formatPrice(p.last)}-${item.label}` : `조회 전-${item.label}`;
 
-      if (!titleBlinkActive) {
-        document.title = titleText;
-      }
+      document.title = priceAlertActive ? `🚨 ${titleText}` : titleText;
 
       const selected = document.getElementById("selectedTitleText");
       if (selected) selected.textContent = getSelectedTitleLabel();
     }
 
     function startTitleBlink(titleText) {
-      stopTitleBlink();
-      titleBlinkActive = true;
-      titleBlinkToggle = false;
-
-      titleBlinkTimer = setInterval(() => {
-        titleBlinkToggle = !titleBlinkToggle;
-        document.title = titleBlinkToggle ? `⚠ ${titleText}` : DEFAULT_TITLE;
-      }, 700);
+      priceAlertActive = true;
+      document.title = `🚨 ${titleText}`;
     }
 
     function stopTitleBlink() {
       titleBlinkActive = false;
       titleBlinkToggle = false;
-
       if (titleBlinkTimer) {
         clearInterval(titleBlinkTimer);
         titleBlinkTimer = null;
@@ -394,12 +386,10 @@
         if (diffPercent >= blinkThresholdPercent) {
           startTitleBlink(titleText);
         } else {
-          stopTitleBlink();
-          document.title = titleText;
+          document.title = priceAlertActive ? `🚨 ${titleText}` : titleText;
         }
       } else {
-        stopTitleBlink();
-        document.title = titleText;
+        document.title = priceAlertActive ? `🚨 ${titleText}` : titleText;
       }
 
       previousSelectedPrice = currentPrice;
@@ -407,6 +397,7 @@
 
     function selectTitleCoin(pair) {
       stopTitleBlink();
+      priceAlertActive = false;
       previousSelectedPrice = null;
 
       if (selectedTitlePair === pair) {
@@ -560,6 +551,7 @@
         selectedTitlePair = "";
         previousSelectedPrice = null;
         stopTitleBlink();
+        priceAlertActive = false;
         localStorage.removeItem(SELECTED_TITLE_KEY);
       }
       saveWatchlist();
@@ -573,6 +565,7 @@
       selectedTitlePair = "";
       previousSelectedPrice = null;
       stopTitleBlink();
+      priceAlertActive = false;
       localStorage.removeItem(SELECTED_TITLE_KEY);
       saveWatchlist();
     }
@@ -804,6 +797,20 @@
 
     document.getElementById("coinInput").addEventListener("keydown", function (e) {
       if (e.key === "Enter") addCoin();
+    });
+
+    window.addEventListener("focus", function () {
+      if (priceAlertActive) {
+        priceAlertActive = false;
+        updateBrowserTitle();
+      }
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && priceAlertActive) {
+        priceAlertActive = false;
+        updateBrowserTitle();
+      }
     });
 
     init();

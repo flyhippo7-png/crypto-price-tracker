@@ -235,6 +235,7 @@
             <option value="0.5">0.5%</option>
             <option value="1" selected>1%</option>
             <option value="2">2%</option>
+            <option value="3">3%</option>
             <option value="5">5%</option>
           </select>
         </span>
@@ -279,6 +280,10 @@
     let titleBlinkActive = false;
     let blinkThresholdPercent = Number(localStorage.getItem(BLINK_THRESHOLD_KEY)) || 1;
     let priceAlertActive = false;
+    let previousPriceMap = new Map();
+    let hourlyAlertCoins = new Map();
+    let lastAlertResetHour = new Date().getHours();
+    let priorityAlertCoin = null;
 
     const defaultCoins = [
       { input: "BTC", pair: "XBT/USD", altname: "XBTUSD", label: "BTC/USD" },
@@ -335,6 +340,13 @@
     }
 
     function updateBrowserTitle() {
+      if (priorityAlertCoin) {
+        document.title = `🚨🚨 ${formatPrice(priorityAlertCoin.price)}-${priorityAlertCoin.label}`;
+        const selected = document.getElementById("selectedTitleText");
+        if (selected) selected.textContent = `🚨🚨 ${formatPrice(priorityAlertCoin.price)}-${priorityAlertCoin.label}`;
+        return;
+      }
+
       const item = watchlist.find(x => x.pair === selectedTitlePair);
       if (!item) {
         stopTitleBlink();
@@ -362,6 +374,63 @@
       if (titleBlinkTimer) {
         clearInterval(titleBlinkTimer);
         titleBlinkTimer = null;
+      }
+    }
+
+    function resetHourlyAlertsIfNeeded() {
+      const now = new Date();
+      const currentHour = now.getHours();
+
+      if (now.getMinutes() === 0 && currentHour !== lastAlertResetHour) {
+        hourlyAlertCoins.clear();
+        priorityAlertCoin = null;
+        priceAlertActive = false;
+        lastAlertResetHour = currentHour;
+        updateBrowserTitle();
+        render();
+      }
+    }
+
+    function checkAllCoinsThreePercentAlert() {
+      resetHourlyAlertsIfNeeded();
+
+      let biggestAlert = null;
+
+      for (const item of watchlist) {
+        const p = priceData.get(item.pair);
+        if (!p || !Number.isFinite(p.last)) continue;
+
+        const currentPrice = p.last;
+        const previousPrice = previousPriceMap.get(item.pair);
+
+        if (previousPrice && previousPrice > 0) {
+          const diffPercent = Math.abs((currentPrice - previousPrice) / previousPrice) * 100;
+
+          if (diffPercent >= 3) {
+            hourlyAlertCoins.set(item.pair, {
+              label: item.label,
+              price: currentPrice,
+              diffPercent,
+              triggeredAt: new Date().toISOString()
+            });
+
+            if (!biggestAlert || diffPercent > biggestAlert.diffPercent) {
+              biggestAlert = {
+                pair: item.pair,
+                label: item.label,
+                price: currentPrice,
+                diffPercent
+              };
+            }
+          }
+        }
+
+        previousPriceMap.set(item.pair, currentPrice);
+      }
+
+      if (biggestAlert) {
+        priorityAlertCoin = biggestAlert;
+        updateBrowserTitle();
       }
     }
 
@@ -618,8 +687,10 @@
 
         setLastUpdate();
         setStatus("정상 조회", "ok");
+        checkAllCoinsThreePercentAlert();
         render();
         checkSelectedPriceBlink();
+        updateBrowserTitle();
       } catch (error) {
         console.error(error);
         setStatus("조회 실패", "bad");
@@ -668,6 +739,7 @@
       const rows = watchlist.map(item => {
         const p = priceData.get(item.pair);
         const checked = selectedTitlePair === item.pair ? "checked" : "";
+        const alertMark = hourlyAlertCoins.has(item.pair) ? "🚨 " : "";
         const changeClass = p?.change > 0 ? "up" : p?.change < 0 ? "down" : "";
         const changeText = p ? `${p.change >= 0 ? "+" : ""}${p.change.toFixed(2)}%` : "-";
         const updated = p?.updatedAt ? p.updatedAt.toLocaleTimeString("ko-KR") : "-";
@@ -678,7 +750,7 @@
               <input type="checkbox" ${checked} onclick="selectTitleCoin('${item.pair}')" title="작업표시줄에 이 코인 표시" />
             </td>
             <td>
-              <div class="coin-name">${item.label}</div>
+              <div class="coin-name">${alertMark}${item.label}</div>
               <div class="small">Kraken pair: ${item.pair}</div>
             </td>
             <td class="price">${p ? formatPrice(p.last) : "조회 전"}</td>
@@ -733,7 +805,8 @@
       blinkThresholdPercent = Number(select.value);
       localStorage.setItem(BLINK_THRESHOLD_KEY, String(blinkThresholdPercent));
 
-      // 기준 변경 시 기존 깜박임은 일단 중지하고 다음 가격 갱신부터 새 기준 적용
+      // 기준 변경 시 기존 선택코인 경보는 중지하고 다음 가격 갱신부터 새 기준 적용
+      priceAlertActive = false;
       stopTitleBlink();
       updateBrowserTitle();
     }
@@ -742,6 +815,8 @@
       if (refreshTimer) clearInterval(refreshTimer);
       refreshTimer = setInterval(refreshNow, refreshInterval);
     }
+
+    setInterval(resetHourlyAlertsIfNeeded, 10000);
 
     function normalizeSavedWatchlist() {
       // 이전 버전에서 저장된 XBT/USD, ETH/USD 같은 wsname 형식은

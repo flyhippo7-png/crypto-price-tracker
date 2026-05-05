@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kraken 코인 실시간 시세 감시</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kraken 코인 시세 감시</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --panel2: #1f2937;
-      --text: #f9fafb;
-      --muted: #9ca3af;
-      --line: #374151;
-      --accent: #38bdf8;
-      --danger: #f87171;
-      --ok: #34d399;
-      --warn: #fbbf24;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel2: #f8fafc;
+      --text: #111827;
+      --muted: #64748b;
+      --line: #d8e0ea;
+      --accent: #0f766e;
+      --danger: #dc2626;
+      --ok: #15803d;
+      --warn: #d97706;
+      --blue: #2563eb;
     }
 
     * { box-sizing: border-box; }
@@ -33,73 +34,19 @@
       padding: 24px;
     }
 
-    .main-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 330px;
-      gap: 16px;
-      align-items: start;
-    }
-
-    .side-panel {
-      position: sticky;
-      top: 16px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px;
-    }
-
-    .side-panel h3 {
-      margin: 0 0 10px;
-      font-size: 16px;
-    }
-
-    .rank-box {
-      margin-top: 14px;
-    }
-
-    .rank-title {
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }
-
-    .rank-item {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 7px 0;
-      border-bottom: 1px solid var(--line);
-      font-size: 13px;
-    }
-
-    .rank-item:last-child { border-bottom: none; }
-    .rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .rank-change { font-weight: 800; }
-    .rank-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
-
     .header {
       display: flex;
-      align-items: flex-start;
       justify-content: space-between;
       gap: 16px;
+      align-items: flex-start;
       margin-bottom: 18px;
     }
 
-    h1 {
-      margin: 0 0 8px;
-      font-size: 26px;
-    }
-
-    .sub {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.6;
-    }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    .sub { color: var(--muted); font-size: 14px; line-height: 1.6; }
 
     .status {
-      min-width: 280px;
+      min-width: 310px;
       padding: 12px 14px;
       border-radius: 12px;
       background: var(--panel);
@@ -136,14 +83,15 @@
 
     button {
       cursor: pointer;
-      background: #2563eb;
-      border-color: #2563eb;
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #ffffff;
       font-weight: 700;
     }
 
-    button:hover { filter: brightness(1.1); }
-    button.secondary { background: var(--panel2); border-color: var(--line); }
-    button.danger { background: #991b1b; border-color: #991b1b; }
+    button.secondary { background: #e2e8f0; border-color: var(--line); color: var(--text); }
+    button.danger { background: #991b1b; border-color: #991b1b; color: #ffffff; }
+    button:hover { filter: brightness(1.05); }
 
     .coin-help {
       margin: -6px 0 16px;
@@ -158,6 +106,7 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 10px;
+      flex-wrap: wrap;
     }
 
     .left-tools, .right-tools {
@@ -179,6 +128,14 @@
       font-size: 13px;
     }
 
+    .badge select { height: 28px; padding: 0 6px; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 16px;
+      align-items: start;
+    }
 
     table {
       width: 100%;
@@ -197,9 +154,9 @@
     }
 
     th {
-      color: var(--muted);
+      color: #334155;
       font-weight: 700;
-      background: #111827;
+      background: #eef2f7;
     }
 
     th:first-child, td:first-child { text-align: left; }
@@ -210,7 +167,6 @@
     .price { color: var(--accent); font-weight: 800; }
     .up { color: var(--ok); }
     .down { color: var(--danger); }
-    .warn { color: var(--warn); }
 
     .empty {
       text-align: center;
@@ -218,8 +174,35 @@
       padding: 36px 10px;
       border: 1px dashed var(--line);
       border-radius: 16px;
-      background: rgba(17, 24, 39, 0.6);
+      background: var(--panel);
     }
+
+    .side-panel {
+      position: sticky;
+      top: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .side-panel h3 { margin: 0 0 10px; font-size: 16px; }
+    .rank-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .rank-box { margin-top: 14px; }
+    .rank-title { color: var(--muted); font-size: 13px; margin-bottom: 8px; font-weight: 700; }
+
+    .rank-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .rank-item:last-child { border-bottom: none; }
+    .rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-change { font-weight: 800; }
 
     .footer-note {
       margin-top: 16px;
@@ -237,9 +220,7 @@
       .header { flex-direction: column; }
       .status { width: 100%; min-width: auto; }
       .controls { grid-template-columns: 1fr; }
-      .toolbar { flex-direction: column; align-items: stretch; }
-      .left-tools, .right-tools { justify-content: space-between; }
-      th:nth-child(4), td:nth-child(4), th:nth-child(5), td:nth-child(5) { display: none; }
+      th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7), th:nth-child(8), td:nth-child(8) { display: none; }
     }
   </style>
 </head>
@@ -248,19 +229,18 @@
     <div class="header">
       <div>
         <h1>Kraken 코인 시세 감시</h1>
-        <div class="sub">
-          Kraken 공개 API 기준 시세를 조회합니다. 저장 정보는 이 PC 브라우저의 localStorage에 자동 저장됩니다.
-        </div>
+        <div class="sub">Kraken 공개 API 기준 시세를 조회합니다. 등록 코인과 경보 기록은 이 PC 브라우저에 저장됩니다.</div>
       </div>
       <div class="status" id="statusBox">
-        상태: <strong>초기화 중</strong><br />
-        마지막 조회: <span id="lastUpdate">-</span><br />
-        등록 코인: <span id="countText">0</span>개
+        상태: <strong>초기화 중</strong><br>
+        마지막 조회: <span id="lastUpdate">-</span><br>
+        등록 코인: <span id="countText">0</span>개<br>
+        작업표시줄 표시: <span id="selectedTitleText">없음</span>
       </div>
     </div>
 
     <div class="controls">
-      <input id="coinInput" list="pairList" placeholder="코인명 또는 거래쌍 입력 예: BTC, ETH, SOL, XBT/USD, ETHUSD" />
+      <input id="coinInput" list="pairList" placeholder="코인명 또는 거래쌍 입력 예: BTC, ETH, SOL, XBT/USD, ETHUSD">
       <select id="quoteSelect">
         <option value="USD">USD 기준</option>
         <option value="USDT">USDT 기준</option>
@@ -273,18 +253,16 @@
 
     <datalist id="pairList"></datalist>
 
-    <div class="coin-help">
-      입력 예시: <b>BTC</b>, <b>ETH</b>, <b>SOL</b>, <b>XRP</b> 또는 Kraken 거래쌍인 <b>XBT/USD</b>, <b>ETH/USD</b>. Kraken에서는 비트코인을 API 내부에서 XBT로 표기하는 경우가 있습니다.
-    </div>
+    <div class="coin-help">입력 예시: <b>BTC</b>, <b>ETH</b>, <b>SOL</b>, <b>XRP</b> 또는 Kraken 거래쌍인 <b>XBT/USD</b>, <b>ETH/USD</b>. Kraken에서는 비트코인을 API 내부에서 XBT로 표기하는 경우가 있습니다.</div>
 
     <div class="toolbar">
       <div class="left-tools">
         <span class="badge">자동갱신: <b id="intervalText">10초</b></span>
         <span class="badge">최대 등록: <b>200개</b></span>
         <span class="badge">🚨경보기준:
-          <select id="blinkThresholdSelect" onchange="changeBlinkThreshold()" style="height:28px; margin-left:6px; padding:0 6px;">
+          <select id="blinkThresholdSelect" onchange="changeBlinkThreshold()">
             <option value="0.5">0.5%</option>
-            <option value="1" selected>1%</option>
+            <option value="1">1%</option>
             <option value="2">2%</option>
             <option value="3">3%</option>
             <option value="5">5%</option>
@@ -304,30 +282,25 @@
 
     <div class="main-grid">
       <div id="tableArea"></div>
-
       <aside class="side-panel">
         <h3>최근 10분 변동률</h3>
         <div class="rank-note">
-          등록된 코인의 현재가와 10분 기준가를 비교해 계산합니다.<br />
-          기준시각: <span id="rankBaseTime">-</span><br />
+          10분마다 한 번 계산해 다음 계산 전까지 고정 표시합니다.<br>
+          계산구간: <span id="rankBaseTime">첫 계산 대기 중</span><br>
           갱신시각: <span id="rankUpdateTime">-</span>
         </div>
-
         <div class="rank-box">
           <div class="rank-title">상승 TOP 10</div>
-          <div id="topGainers">기준 데이터 수집 중</div>
+          <div id="topGainers">10분 경과 후 표시</div>
         </div>
-
         <div class="rank-box">
           <div class="rank-title">하락 TOP 10</div>
-          <div id="topLosers">기준 데이터 수집 중</div>
+          <div id="topLosers">10분 경과 후 표시</div>
         </div>
       </aside>
     </div>
 
-    <div class="footer-note">
-      주의: 이 페이지는 시세 조회용 예제이며 매매 기능은 없습니다. Kraken API 응답 지연, 네트워크 차단, 거래쌍 미지원에 따라 일부 종목은 조회되지 않을 수 있습니다.
-    </div>
+    <div class="footer-note">주의: 이 페이지는 시세 조회용 예제이며 매매 기능은 없습니다. Kraken API 응답 지연, 네트워크 차단, 거래쌍 미지원에 따라 일부 종목은 조회되지 않을 수 있습니다.</div>
   </div>
 
   <script>
@@ -339,6 +312,7 @@
     const LAST_ALERT_RESET_HOUR_KEY = "kraken_last_alert_reset_hour_v1";
     const TEN_MIN_BASE_PRICES_KEY = "kraken_ten_min_base_prices_v1";
     const TEN_MIN_BASE_TIME_KEY = "kraken_ten_min_base_time_v1";
+    const TEN_MIN_RANKINGS_KEY = "kraken_ten_min_rankings_v1";
     const DEFAULT_TITLE = "Kraken 코인 시세 감시";
     const MAX_COINS = 200;
     const KRAKEN_BASE = "https://api.kraken.com/0/public";
@@ -347,29 +321,26 @@
     let assetPairs = {};
     let pairLookup = new Map();
     let priceData = new Map();
+    let previousPriceMap = new Map();
+    let hourlyAlertCoins = new Map();
+    let tenMinBasePrices = new Map();
+    let tenMinBaseTime = Number(localStorage.getItem(TEN_MIN_BASE_TIME_KEY)) || 0;
+    let tenMinRankings = null;
     let refreshTimer = null;
     let refreshInterval = 10000;
     let isLoading = false;
     let selectedTitlePair = localStorage.getItem(SELECTED_TITLE_KEY) || "";
-    let previousSelectedPrice = null;
-    let titleBlinkTimer = null;
-    let titleBlinkToggle = false;
-    let titleBlinkActive = false;
     let blinkThresholdPercent = Number(localStorage.getItem(BLINK_THRESHOLD_KEY)) || 1;
     let priceAlertActive = false;
-    let previousPriceMap = new Map();
-    let hourlyAlertCoins = new Map();
+    let priorityAlertCoin = null;
     let lastAlertResetHour = Number(localStorage.getItem(LAST_ALERT_RESET_HOUR_KEY));
     if (!Number.isFinite(lastAlertResetHour)) lastAlertResetHour = new Date().getHours();
-    let priorityAlertCoin = null;
-    let tenMinBasePrices = new Map();
-    let tenMinBaseTime = Number(localStorage.getItem(TEN_MIN_BASE_TIME_KEY)) || 0;
 
     const defaultCoins = [
-      { input: "BTC", pair: "XBT/USD", altname: "XBTUSD", label: "BTC/USD" },
-      { input: "ETH", pair: "ETH/USD", altname: "ETHUSD", label: "ETH/USD" },
-      { input: "SOL", pair: "SOL/USD", altname: "SOLUSD", label: "SOL/USD" },
-      { input: "XRP", pair: "XRP/USD", altname: "XRPUSD", label: "XRP/USD" }
+      { input: "BTC", pair: "XXBTZUSD", altname: "XBTUSD", label: "XBT/USD" },
+      { input: "ETH", pair: "XETHZUSD", altname: "ETHUSD", label: "ETH/USD" },
+      { input: "SOL", pair: "SOLUSD", altname: "SOLUSD", label: "SOL/USD" },
+      { input: "XRP", pair: "XXRPZUSD", altname: "XRPUSD", label: "XRP/USD" }
     ];
 
     function saveWatchlist() {
@@ -380,27 +351,17 @@
     function loadWatchlist() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (Array.isArray(saved)) {
-          watchlist = saved.slice(0, MAX_COINS);
-        } else {
-          watchlist = defaultCoins;
-          saveWatchlist();
-        }
+        watchlist = Array.isArray(saved) ? saved.slice(0, MAX_COINS) : defaultCoins;
       } catch (_) {
         watchlist = defaultCoins;
-        saveWatchlist();
       }
+      if (!localStorage.getItem(STORAGE_KEY)) saveWatchlist();
     }
 
-    function setStatus(message, type = "") {
-      const statusBox = document.getElementById("statusBox");
+    function setStatus(message, type) {
       const className = type === "ok" ? "ok" : type === "bad" ? "bad" : "";
-      statusBox.innerHTML = `
-        상태: <strong class="${className}">${message}</strong><br />
-        마지막 조회: <span id="lastUpdate">${document.getElementById("lastUpdate")?.textContent || "-"}</span><br />
-        등록 코인: <span id="countText">${watchlist.length}</span>개<br />
-        작업표시줄 표시: <span id="selectedTitleText">${getSelectedTitleLabel()}</span>
-      `;
+      const statusBox = document.getElementById("statusBox");
+      statusBox.innerHTML = `상태: <strong class="${className}">${message}</strong><br>마지막 조회: <span id="lastUpdate">${document.getElementById("lastUpdate")?.textContent || "-"}</span><br>등록 코인: <span id="countText">${watchlist.length}</span>개<br>작업표시줄 표시: <span id="selectedTitleText">${getSelectedTitleLabel()}</span>`;
     }
 
     function setLastUpdate() {
@@ -429,175 +390,14 @@
 
       const item = watchlist.find(x => x.pair === selectedTitlePair);
       if (!item) {
-        stopTitleBlink();
         document.title = DEFAULT_TITLE;
         return;
       }
-
       const p = priceData.get(item.pair);
       const titleText = p ? `${formatPrice(p.last)}-${item.label}` : `조회 전-${item.label}`;
-
       document.title = priceAlertActive ? `🚨 ${titleText}` : titleText;
-
       const selected = document.getElementById("selectedTitleText");
       if (selected) selected.textContent = getSelectedTitleLabel();
-    }
-
-    function startTitleBlink(titleText) {
-      priceAlertActive = true;
-      document.title = `🚨 ${titleText}`;
-    }
-
-    function stopTitleBlink() {
-      titleBlinkActive = false;
-      titleBlinkToggle = false;
-      if (titleBlinkTimer) {
-        clearInterval(titleBlinkTimer);
-        titleBlinkTimer = null;
-      }
-    }
-
-    function saveHourlyAlerts() {
-      const alertArray = Array.from(hourlyAlertCoins.entries());
-      localStorage.setItem(HOURLY_ALERT_COINS_KEY, JSON.stringify(alertArray));
-      localStorage.setItem(PRIORITY_ALERT_COIN_KEY, JSON.stringify(priorityAlertCoin));
-      localStorage.setItem(LAST_ALERT_RESET_HOUR_KEY, String(lastAlertResetHour));
-    }
-
-    function loadHourlyAlerts() {
-      try {
-        const savedAlerts = JSON.parse(localStorage.getItem(HOURLY_ALERT_COINS_KEY) || "[]");
-        if (Array.isArray(savedAlerts)) {
-          hourlyAlertCoins = new Map(savedAlerts);
-        }
-      } catch (_) {
-        hourlyAlertCoins = new Map();
-      }
-
-      try {
-        priorityAlertCoin = JSON.parse(localStorage.getItem(PRIORITY_ALERT_COIN_KEY) || "null");
-      } catch (_) {
-        priorityAlertCoin = null;
-      }
-
-      resetHourlyAlertsIfNeeded();
-    }
-
-    function clearHourlyAlerts() {
-      hourlyAlertCoins.clear();
-      priorityAlertCoin = null;
-      priceAlertActive = false;
-      localStorage.removeItem(HOURLY_ALERT_COINS_KEY);
-      localStorage.removeItem(PRIORITY_ALERT_COIN_KEY);
-      localStorage.setItem(LAST_ALERT_RESET_HOUR_KEY, String(lastAlertResetHour));
-    }
-
-    function saveTenMinuteBasePrices() {
-      localStorage.setItem(TEN_MIN_BASE_PRICES_KEY, JSON.stringify(Array.from(tenMinBasePrices.entries())));
-      localStorage.setItem(TEN_MIN_BASE_TIME_KEY, String(tenMinBaseTime));
-    }
-
-    function loadTenMinuteBasePrices() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(TEN_MIN_BASE_PRICES_KEY) || "[]");
-        if (Array.isArray(saved)) tenMinBasePrices = new Map(saved);
-      } catch (_) {
-        tenMinBasePrices = new Map();
-      }
-      tenMinBaseTime = Number(localStorage.getItem(TEN_MIN_BASE_TIME_KEY)) || 0;
-    }
-
-    function updateTenMinuteBaseIfNeeded() {
-      const now = Date.now();
-      const TEN_MINUTES = 10 * 60 * 1000;
-
-      if (!tenMinBaseTime || now - tenMinBaseTime >= TEN_MINUTES) {
-        tenMinBasePrices.clear();
-
-        for (const item of watchlist) {
-          const p = priceData.get(item.pair);
-          if (p && Number.isFinite(p.last)) {
-            tenMinBasePrices.set(item.pair, p.last);
-          }
-        }
-
-        tenMinBaseTime = now;
-        saveTenMinuteBasePrices();
-      }
-    }
-
-    function renderTenMinuteRankings() {
-      const baseTimeEl = document.getElementById("rankBaseTime");
-      const updateTimeEl = document.getElementById("rankUpdateTime");
-      const gainersEl = document.getElementById("topGainers");
-      const losersEl = document.getElementById("topLosers");
-      if (!baseTimeEl || !updateTimeEl || !gainersEl || !losersEl) return;
-
-      if (!tenMinBaseTime || tenMinBasePrices.size === 0) {
-        baseTimeEl.textContent = "수집 중";
-        updateTimeEl.textContent = "-";
-        gainersEl.textContent = "기준 데이터 수집 중";
-        losersEl.textContent = "기준 데이터 수집 중";
-        return;
-      }
-
-      const rows = [];
-      for (const item of watchlist) {
-        const base = tenMinBasePrices.get(item.pair);
-        const p = priceData.get(item.pair);
-        if (!base || !p || !Number.isFinite(base) || !Number.isFinite(p.last)) continue;
-
-        const changePercent = ((p.last - base) / base) * 100;
-        rows.push({
-          label: item.label,
-          price: p.last,
-          changePercent
-        });
-      }
-
-      baseTimeEl.textContent = new Date(tenMinBaseTime).toLocaleTimeString("ko-KR");
-      updateTimeEl.textContent = new Date().toLocaleTimeString("ko-KR");
-
-      if (rows.length === 0) {
-        gainersEl.textContent = "표시할 데이터 없음";
-        losersEl.textContent = "표시할 데이터 없음";
-        return;
-      }
-
-      const gainers = rows
-        .filter(x => x.changePercent > 0)
-        .sort((a, b) => b.changePercent - a.changePercent)
-        .slice(0, 10);
-
-      const losers = rows
-        .filter(x => x.changePercent < 0)
-        .sort((a, b) => a.changePercent - b.changePercent)
-        .slice(0, 10);
-
-      function makeRankHtml(items) {
-        if (items.length === 0) return "표시할 데이터 없음";
-        return items.map((x, idx) => `
-          <div class="rank-item">
-            <span class="rank-name">${idx + 1}. ${x.label}</span>
-            <span class="rank-change ${x.changePercent >= 0 ? "up" : "down"}">${x.changePercent >= 0 ? "+" : ""}${x.changePercent.toFixed(2)}%</span>
-          </div>
-        `).join("");
-      }
-
-      gainersEl.innerHTML = makeRankHtml(gainers);
-      losersEl.innerHTML = makeRankHtml(losers);
-    }
-
-    function resetHourlyAlertsIfNeeded() {
-      const now = new Date();
-      const currentHour = now.getHours();
-
-      if (now.getMinutes() === 0 && currentHour !== lastAlertResetHour) {
-        lastAlertResetHour = currentHour;
-        clearHourlyAlerts();
-        updateBrowserTitle();
-        render();
-      }
     }
 
     function restoreSelectedTitleAfterUserCheck() {
@@ -608,107 +408,23 @@
       updateBrowserTitle();
     }
 
-    function checkAllCoinsThreePercentAlert() {
-      resetHourlyAlertsIfNeeded();
-
-      let biggestAlert = null;
-
-      for (const item of watchlist) {
-        const p = priceData.get(item.pair);
-        if (!p || !Number.isFinite(p.last)) continue;
-
-        const currentPrice = p.last;
-        const previousPrice = previousPriceMap.get(item.pair);
-
-        if (previousPrice && previousPrice > 0) {
-          const diffPercent = Math.abs((currentPrice - previousPrice) / previousPrice) * 100;
-
-          if (diffPercent >= 3) {
-            hourlyAlertCoins.set(item.pair, {
-              label: item.label,
-              price: currentPrice,
-              diffPercent,
-              triggeredAt: new Date().toISOString(),
-              alertHour: new Date().getHours()
-            });
-
-            if (!biggestAlert || diffPercent > biggestAlert.diffPercent) {
-              biggestAlert = {
-                pair: item.pair,
-                label: item.label,
-                price: currentPrice,
-                diffPercent
-              };
-            }
-          }
-        }
-
-        previousPriceMap.set(item.pair, currentPrice);
-      }
-
-      if (biggestAlert) {
-        priorityAlertCoin = biggestAlert;
-        saveHourlyAlerts();
-        updateBrowserTitle();
-      } else if (hourlyAlertCoins.size > 0) {
-        saveHourlyAlerts();
-      }
-    }
-
-    function checkSelectedPriceBlink() {
-      const item = watchlist.find(x => x.pair === selectedTitlePair);
-      if (!item) {
-        previousSelectedPrice = null;
-        stopTitleBlink();
-        document.title = DEFAULT_TITLE;
-        return;
-      }
-
-      const p = priceData.get(item.pair);
-      if (!p || !Number.isFinite(p.last)) return;
-
-      const currentPrice = p.last;
-      const titleText = `${formatPrice(currentPrice)}-${item.label}`;
-
-      if (previousSelectedPrice !== null && previousSelectedPrice > 0) {
-        const diffPercent = Math.abs((currentPrice - previousSelectedPrice) / previousSelectedPrice) * 100;
-
-        if (diffPercent >= blinkThresholdPercent) {
-          startTitleBlink(titleText);
-        } else {
-          document.title = priceAlertActive ? `🚨 ${titleText}` : titleText;
-        }
-      } else {
-        document.title = priceAlertActive ? `🚨 ${titleText}` : titleText;
-      }
-
-      previousSelectedPrice = currentPrice;
-    }
-
     function selectTitleCoin(pair) {
-      stopTitleBlink();
       priceAlertActive = false;
-      previousSelectedPrice = null;
-
-      if (selectedTitlePair === pair) {
-        selectedTitlePair = "";
-        localStorage.removeItem(SELECTED_TITLE_KEY);
-      } else {
-        selectedTitlePair = pair;
-        localStorage.setItem(SELECTED_TITLE_KEY, pair);
-      }
+      priorityAlertCoin = null;
+      localStorage.removeItem(PRIORITY_ALERT_COIN_KEY);
+      selectedTitlePair = selectedTitlePair === pair ? "" : pair;
+      if (selectedTitlePair) localStorage.setItem(SELECTED_TITLE_KEY, selectedTitlePair);
+      else localStorage.removeItem(SELECTED_TITLE_KEY);
       render();
       updateBrowserTitle();
     }
 
     function normalizeInput(value) {
-      return value.trim().toUpperCase().replace(/\s+/g, "");
+      return value.trim().toUpperCase().split(" ").join("");
     }
 
     function normalizeBaseSymbol(symbol) {
-      const s = symbol.toUpperCase();
-      if (s === "BTC") return "XBT";
-      return s;
+      return symbol.toUpperCase() === "BTC" ? "XBT" : symbol.toUpperCase();
     }
 
     async function loadAssetPairs() {
@@ -723,81 +439,38 @@
       Object.entries(assetPairs).forEach(([pairKey, info]) => {
         const altname = info.altname || pairKey;
         const wsname = info.wsname || altname;
-        const base = info.base || "";
-        const quote = info.quote || "";
-
-        const keys = new Set([
-          pairKey.toUpperCase(),
-          altname.toUpperCase(),
-          wsname.toUpperCase(),
-          wsname.replace("/", "").toUpperCase()
-        ]);
-
-        keys.forEach(k => pairLookup.set(k, { pair: pairKey, altname, wsname, base, quote }));
+        const keys = [pairKey.toUpperCase(), altname.toUpperCase(), wsname.toUpperCase(), wsname.replace("/", "").toUpperCase()];
+        keys.forEach(k => pairLookup.set(k, { pair: pairKey, altname, wsname }));
       });
 
-      buildDatalist();
-    }
-
-    function buildDatalist() {
       const datalist = document.getElementById("pairList");
-      const items = Object.values(assetPairs)
-        .filter(info => info.wsname)
-        .slice(0, 1500)
-        .map(info => `<option value="${info.wsname}"></option>`)
-        .join("");
-      datalist.innerHTML = items;
+      datalist.innerHTML = Object.values(assetPairs).filter(info => info.wsname).slice(0, 1500).map(info => `<option value="${info.wsname}"></option>`).join("");
     }
 
     function findPair(input, quoteCurrency) {
       const raw = normalizeInput(input);
       if (!raw) return null;
 
-      // 1) 사용자가 XBT/USD처럼 직접 입력한 경우
       const directKey = raw.replace("-", "/");
       if (pairLookup.has(directKey)) {
         const found = pairLookup.get(directKey);
-        return {
-          input: raw,
-          pair: found.pair,
-          altname: found.altname,
-          label: found.wsname || found.altname
-        };
+        return { input: raw, pair: found.pair, altname: found.altname, label: found.wsname || found.altname };
       }
 
-      // 2) 사용자가 ETHUSD처럼 직접 입력한 경우
       if (pairLookup.has(raw)) {
         const found = pairLookup.get(raw);
-        return {
-          input: raw,
-          pair: found.pair,
-          altname: found.altname,
-          label: found.wsname || found.altname
-        };
+        return { input: raw, pair: found.pair, altname: found.altname, label: found.wsname || found.altname };
       }
 
-      // 3) 사용자가 BTC, ETH처럼 코인명만 입력한 경우
       const baseSymbol = normalizeBaseSymbol(raw);
       const quote = quoteCurrency.toUpperCase();
-      const candidates = [
-        `${baseSymbol}/${quote}`,
-        `${baseSymbol}${quote}`,
-        `${raw}/${quote}`,
-        `${raw}${quote}`
-      ];
-
+      const candidates = [`${baseSymbol}/${quote}`, `${baseSymbol}${quote}`, `${raw}/${quote}`, `${raw}${quote}`];
       for (const key of candidates) {
         if (pairLookup.has(key)) {
           const found = pairLookup.get(key);
-          return {
-            input: raw,
-            pair: found.pair,
-            altname: found.altname,
-            label: found.wsname || found.altname
-          };
+          return { input: raw, pair: found.pair, altname: found.altname, label: found.wsname || found.altname };
         }
       }
-
       return null;
     }
 
@@ -806,27 +479,12 @@
       const quote = document.getElementById("quoteSelect").value;
       const value = inputEl.value;
 
-      if (!value.trim()) {
-        alert("추가할 코인명 또는 거래쌍을 입력하세요.");
-        return;
-      }
-
-      if (watchlist.length >= MAX_COINS) {
-        alert(`최대 ${MAX_COINS}개까지만 등록할 수 있습니다.`);
-        return;
-      }
+      if (!value.trim()) return alert("추가할 코인명 또는 거래쌍을 입력하세요.");
+      if (watchlist.length >= MAX_COINS) return alert(`최대 ${MAX_COINS}개까지만 등록할 수 있습니다.`);
 
       const found = findPair(value, quote);
-      if (!found) {
-        alert("Kraken에서 해당 거래쌍을 찾지 못했습니다. 예: BTC, ETH, SOL, XBT/USD, ETH/USD");
-        return;
-      }
-
-      const exists = watchlist.some(item => item.pair === found.pair);
-      if (exists) {
-        alert("이미 등록된 코인입니다.");
-        return;
-      }
+      if (!found) return alert("Kraken에서 해당 거래쌍을 찾지 못했습니다. 예: BTC, ETH, SOL, XBT/USD, ETH/USD");
+      if (watchlist.some(item => item.pair === found.pair)) return alert("이미 등록된 코인입니다.");
 
       watchlist.push(found);
       inputEl.value = "";
@@ -841,18 +499,16 @@
       tenMinBasePrices.delete(pair);
       hourlyAlertCoins.delete(pair);
       if (priorityAlertCoin && priorityAlertCoin.pair === pair) priorityAlertCoin = null;
-      saveHourlyAlerts();
-      saveTenMinuteBasePrices();
-      renderTenMinuteRankings();
       if (selectedTitlePair === pair) {
         selectedTitlePair = "";
-        previousSelectedPrice = null;
-        stopTitleBlink();
         priceAlertActive = false;
         localStorage.removeItem(SELECTED_TITLE_KEY);
       }
+      saveHourlyAlerts();
+      saveTenMinuteBasePrices();
       saveWatchlist();
-      refreshNow();
+      renderTenMinuteRankings();
+      updateBrowserTitle();
     }
 
     function clearAllCoins() {
@@ -861,31 +517,33 @@
       priceData.clear();
       previousPriceMap.clear();
       tenMinBasePrices.clear();
-      tenMinBaseTime = 0;
-      saveTenMinuteBasePrices();
-      clearHourlyAlerts();
+      hourlyAlertCoins.clear();
       selectedTitlePair = "";
-      previousSelectedPrice = null;
-      stopTitleBlink();
       priceAlertActive = false;
+      priorityAlertCoin = null;
+      tenMinBaseTime = 0;
+      tenMinRankings = null;
       localStorage.removeItem(SELECTED_TITLE_KEY);
+      localStorage.removeItem(TEN_MIN_RANKINGS_KEY);
+      saveHourlyAlerts();
+      saveTenMinuteBasePrices();
       saveWatchlist();
+      renderTenMinuteRankings();
+      updateBrowserTitle();
     }
 
     async function refreshNow() {
       if (isLoading) return;
       if (watchlist.length === 0) {
         render();
-        setStatus("대기 중");
+        setStatus("대기 중", "");
         return;
       }
 
       isLoading = true;
-      setStatus("조회 중");
+      setStatus("조회 중", "");
 
       try {
-        // Kraken Ticker는 여러 pair를 쉼표로 묶어 요청 가능.
-        // 200개 전체를 한 번에 요청하면 URL이 길어질 수 있으므로 50개씩 분할.
         const chunks = chunkArray(watchlist, 50);
         const allResults = {};
 
@@ -903,28 +561,25 @@
           const matched = matchResultToWatchItem(resultKey);
           if (!matched) return;
 
-          const last = Number(ticker.c?.[0]);
+          const last = Number(ticker.c && ticker.c[0]);
           const open = Number(ticker.o);
-          const high = Number(ticker.h?.[1]);
-          const low = Number(ticker.l?.[1]);
-          const volume = Number(ticker.v?.[1]);
-          const bid = Number(ticker.b?.[0]);
-          const ask = Number(ticker.a?.[0]);
+          const high = Number(ticker.h && ticker.h[1]);
+          const low = Number(ticker.l && ticker.l[1]);
+          const volume = Number(ticker.v && ticker.v[1]);
+          const bid = Number(ticker.b && ticker.b[0]);
+          const ask = Number(ticker.a && ticker.a[0]);
           const change = open ? ((last - open) / open) * 100 : 0;
 
-          priceData.set(matched.pair, {
-            last, open, high, low, volume, bid, ask, change,
-            updatedAt: new Date()
-          });
+          priceData.set(matched.pair, { last, open, high, low, volume, bid, ask, change, updatedAt: new Date() });
         });
 
         setLastUpdate();
         setStatus("정상 조회", "ok");
         updateTenMinuteBaseIfNeeded();
         checkAllCoinsThreePercentAlert();
+        checkSelectedPriceAlert();
         render();
         renderTenMinuteRankings();
-        checkSelectedPriceBlink();
         updateBrowserTitle();
       } catch (error) {
         console.error(error);
@@ -937,19 +592,189 @@
 
     function matchResultToWatchItem(resultKey) {
       const upper = resultKey.toUpperCase();
-      return watchlist.find(item =>
-        item.pair.toUpperCase() === upper ||
-        item.altname.toUpperCase() === upper ||
-        item.label.replace("/", "").toUpperCase() === upper
-      );
+      return watchlist.find(item => item.pair.toUpperCase() === upper || item.altname.toUpperCase() === upper || item.label.replace("/", "").toUpperCase() === upper);
     }
 
     function chunkArray(arr, size) {
       const chunks = [];
-      for (let i = 0; i < arr.length; i += size) {
-        chunks.push(arr.slice(i, i + size));
-      }
+      for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
       return chunks;
+    }
+
+    function saveHourlyAlerts() {
+      localStorage.setItem(HOURLY_ALERT_COINS_KEY, JSON.stringify(Array.from(hourlyAlertCoins.entries())));
+      localStorage.setItem(PRIORITY_ALERT_COIN_KEY, JSON.stringify(priorityAlertCoin));
+      localStorage.setItem(LAST_ALERT_RESET_HOUR_KEY, String(lastAlertResetHour));
+    }
+
+    function loadHourlyAlerts() {
+      try {
+        const savedAlerts = JSON.parse(localStorage.getItem(HOURLY_ALERT_COINS_KEY) || "[]");
+        hourlyAlertCoins = Array.isArray(savedAlerts) ? new Map(savedAlerts) : new Map();
+      } catch (_) {
+        hourlyAlertCoins = new Map();
+      }
+
+      try {
+        priorityAlertCoin = JSON.parse(localStorage.getItem(PRIORITY_ALERT_COIN_KEY) || "null");
+      } catch (_) {
+        priorityAlertCoin = null;
+      }
+    }
+
+    function clearHourlyAlerts() {
+      hourlyAlertCoins.clear();
+      priorityAlertCoin = null;
+      priceAlertActive = false;
+      localStorage.removeItem(HOURLY_ALERT_COINS_KEY);
+      localStorage.removeItem(PRIORITY_ALERT_COIN_KEY);
+      localStorage.setItem(LAST_ALERT_RESET_HOUR_KEY, String(lastAlertResetHour));
+    }
+
+    function resetHourlyAlertsIfNeeded() {
+      const now = new Date();
+      const currentHour = now.getHours();
+      if (now.getMinutes() === 0 && currentHour !== lastAlertResetHour) {
+        lastAlertResetHour = currentHour;
+        clearHourlyAlerts();
+        updateBrowserTitle();
+        render();
+      }
+    }
+
+    function checkAllCoinsThreePercentAlert() {
+      resetHourlyAlertsIfNeeded();
+      let biggestAlert = null;
+
+      for (const item of watchlist) {
+        const p = priceData.get(item.pair);
+        if (!p || !Number.isFinite(p.last)) continue;
+
+        const currentPrice = p.last;
+        const previousPrice = previousPriceMap.get(item.pair);
+
+        if (previousPrice && previousPrice > 0) {
+          const diffPercent = Math.abs((currentPrice - previousPrice) / previousPrice) * 100;
+          if (diffPercent >= 3) {
+            hourlyAlertCoins.set(item.pair, { label: item.label, price: currentPrice, diffPercent, triggeredAt: new Date().toISOString(), alertHour: new Date().getHours() });
+            if (!biggestAlert || diffPercent > biggestAlert.diffPercent) biggestAlert = { pair: item.pair, label: item.label, price: currentPrice, diffPercent };
+          }
+        }
+        previousPriceMap.set(item.pair, currentPrice);
+      }
+
+      if (biggestAlert) {
+        priorityAlertCoin = biggestAlert;
+        saveHourlyAlerts();
+      } else if (hourlyAlertCoins.size > 0) {
+        saveHourlyAlerts();
+      }
+    }
+
+    function checkSelectedPriceAlert() {
+      const item = watchlist.find(x => x.pair === selectedTitlePair);
+      if (!item) return;
+      const p = priceData.get(item.pair);
+      if (!p || !Number.isFinite(p.last)) return;
+      const previousPrice = previousPriceMap.get(item.pair);
+      if (previousPrice && previousPrice > 0) {
+        const diffPercent = Math.abs((p.last - previousPrice) / previousPrice) * 100;
+        if (diffPercent >= blinkThresholdPercent) priceAlertActive = true;
+      }
+    }
+
+    function saveTenMinuteBasePrices() {
+      localStorage.setItem(TEN_MIN_BASE_PRICES_KEY, JSON.stringify(Array.from(tenMinBasePrices.entries())));
+      localStorage.setItem(TEN_MIN_BASE_TIME_KEY, String(tenMinBaseTime));
+    }
+
+    function saveTenMinuteRankings() {
+      localStorage.setItem(TEN_MIN_RANKINGS_KEY, JSON.stringify(tenMinRankings));
+    }
+
+    function loadTenMinuteBasePrices() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(TEN_MIN_BASE_PRICES_KEY) || "[]");
+        tenMinBasePrices = Array.isArray(saved) ? new Map(saved) : new Map();
+      } catch (_) {
+        tenMinBasePrices = new Map();
+      }
+      tenMinBaseTime = Number(localStorage.getItem(TEN_MIN_BASE_TIME_KEY)) || 0;
+      try {
+        tenMinRankings = JSON.parse(localStorage.getItem(TEN_MIN_RANKINGS_KEY) || "null");
+      } catch (_) {
+        tenMinRankings = null;
+      }
+    }
+
+    function updateTenMinuteBaseIfNeeded() {
+      const now = Date.now();
+      const tenMinutes = 10 * 60 * 1000;
+
+      if (!tenMinBaseTime || tenMinBasePrices.size === 0) {
+        tenMinBasePrices.clear();
+        for (const item of watchlist) {
+          const p = priceData.get(item.pair);
+          if (p && Number.isFinite(p.last)) tenMinBasePrices.set(item.pair, p.last);
+        }
+        tenMinBaseTime = now;
+        saveTenMinuteBasePrices();
+        return;
+      }
+
+      if (now - tenMinBaseTime >= tenMinutes) {
+        const rows = [];
+        for (const item of watchlist) {
+          const base = tenMinBasePrices.get(item.pair);
+          const p = priceData.get(item.pair);
+          if (!base || !p || !Number.isFinite(base) || !Number.isFinite(p.last)) continue;
+          const changePercent = ((p.last - base) / base) * 100;
+          rows.push({ label: item.label, price: p.last, changePercent });
+        }
+
+        tenMinRankings = {
+          from: tenMinBaseTime,
+          to: now,
+          gainers: rows.filter(x => x.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent).slice(0, 10),
+          losers: rows.filter(x => x.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent).slice(0, 10)
+        };
+        saveTenMinuteRankings();
+
+        tenMinBasePrices.clear();
+        for (const item of watchlist) {
+          const p = priceData.get(item.pair);
+          if (p && Number.isFinite(p.last)) tenMinBasePrices.set(item.pair, p.last);
+        }
+        tenMinBaseTime = now;
+        saveTenMinuteBasePrices();
+      }
+    }
+
+    function renderTenMinuteRankings() {
+      const baseTimeEl = document.getElementById("rankBaseTime");
+      const updateTimeEl = document.getElementById("rankUpdateTime");
+      const gainersEl = document.getElementById("topGainers");
+      const losersEl = document.getElementById("topLosers");
+      if (!baseTimeEl || !updateTimeEl || !gainersEl || !losersEl) return;
+
+      if (!tenMinRankings) {
+        baseTimeEl.textContent = "첫 계산 대기 중";
+        updateTimeEl.textContent = "-";
+        gainersEl.textContent = "10분 경과 후 표시";
+        losersEl.textContent = "10분 경과 후 표시";
+        return;
+      }
+
+      baseTimeEl.textContent = `${new Date(tenMinRankings.from).toLocaleTimeString("ko-KR")} ~ ${new Date(tenMinRankings.to).toLocaleTimeString("ko-KR")}`;
+      updateTimeEl.textContent = new Date(tenMinRankings.to).toLocaleTimeString("ko-KR");
+
+      const makeRankHtml = function(items) {
+        if (!items || items.length === 0) return "표시할 데이터 없음";
+        return items.map((x, idx) => `<div class="rank-item"><span class="rank-name">${idx + 1}. ${x.label}</span><span class="rank-change ${x.changePercent >= 0 ? "up" : "down"}">${x.changePercent >= 0 ? "+" : ""}${x.changePercent.toFixed(2)}%</span></div>`).join("");
+      };
+
+      gainersEl.innerHTML = makeRankHtml(tenMinRankings.gainers);
+      losersEl.innerHTML = makeRankHtml(tenMinRankings.losers);
     }
 
     function formatPrice(value) {
@@ -975,52 +800,14 @@
         const p = priceData.get(item.pair);
         const checked = selectedTitlePair === item.pair ? "checked" : "";
         const alertMark = hourlyAlertCoins.has(item.pair) ? "🚨 " : "";
-        const changeClass = p?.change > 0 ? "up" : p?.change < 0 ? "down" : "";
+        const changeClass = p && p.change > 0 ? "up" : p && p.change < 0 ? "down" : "";
         const changeText = p ? `${p.change >= 0 ? "+" : ""}${p.change.toFixed(2)}%` : "-";
-        const updated = p?.updatedAt ? p.updatedAt.toLocaleTimeString("ko-KR") : "-";
+        const updated = p && p.updatedAt ? p.updatedAt.toLocaleTimeString("ko-KR") : "-";
 
-        return `
-          <tr>
-            <td>
-              <input type="checkbox" ${checked} onclick="selectTitleCoin('${item.pair}')" title="작업표시줄에 이 코인 표시" />
-            </td>
-            <td>
-              <div class="coin-name">${alertMark}${item.label}</div>
-              <div class="small">Kraken pair: ${item.pair}</div>
-            </td>
-            <td class="price">${p ? formatPrice(p.last) : "조회 전"}</td>
-            <td class="${changeClass}">${changeText}</td>
-            <td>${p ? formatPrice(p.bid) : "-"}</td>
-            <td>${p ? formatPrice(p.ask) : "-"}</td>
-            <td>${p ? formatPrice(p.high) : "-"}</td>
-            <td>${p ? formatPrice(p.low) : "-"}</td>
-            <td>${p ? formatNumber(p.volume) : "-"}</td>
-            <td>${updated}</td>
-            <td><button class="danger" onclick="removeCoin('${item.pair}')">삭제</button></td>
-          </tr>
-        `;
+        return `<tr><td><input type="checkbox" ${checked} onclick="selectTitleCoin('${item.pair}')" title="작업표시줄에 이 코인 표시"></td><td><div class="coin-name">${alertMark}${item.label}</div><div class="small">Kraken pair: ${item.pair}</div></td><td class="price">${p ? formatPrice(p.last) : "조회 전"}</td><td class="${changeClass}">${changeText}</td><td>${p ? formatPrice(p.bid) : "-"}</td><td>${p ? formatPrice(p.ask) : "-"}</td><td>${p ? formatPrice(p.high) : "-"}</td><td>${p ? formatPrice(p.low) : "-"}</td><td>${p ? formatNumber(p.volume) : "-"}</td><td>${updated}</td><td><button class="danger" onclick="removeCoin('${item.pair}')">삭제</button></td></tr>`;
       }).join("");
 
-      area.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>표시</th>
-              <th>코인명</th>
-              <th>시세</th>
-              <th>변동률</th>
-              <th>매수호가</th>
-              <th>매도호가</th>
-              <th>24h 고가</th>
-              <th>24h 저가</th>
-              <th>24h 거래량</th>
-              <th>갱신</th>
-              <th>관리</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
+      area.innerHTML = `<table><thead><tr><th>표시</th><th>코인명</th><th>시세</th><th>변동률</th><th>매수호가</th><th>매도호가</th><th>24h 고가</th><th>24h 저가</th><th>24h 거래량</th><th>갱신</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 
     function render() {
@@ -1039,10 +826,7 @@
       const select = document.getElementById("blinkThresholdSelect");
       blinkThresholdPercent = Number(select.value);
       localStorage.setItem(BLINK_THRESHOLD_KEY, String(blinkThresholdPercent));
-
-      // 기준 변경 시 기존 선택코인 경보는 중지하고 다음 가격 갱신부터 새 기준 적용
       priceAlertActive = false;
-      stopTitleBlink();
       updateBrowserTitle();
     }
 
@@ -1051,29 +835,19 @@
       refreshTimer = setInterval(refreshNow, refreshInterval);
     }
 
-    setInterval(resetHourlyAlertsIfNeeded, 10000);
-
     function normalizeSavedWatchlist() {
-      // 이전 버전에서 저장된 XBT/USD, ETH/USD 같은 wsname 형식은
-      // Ticker 요청용 pairKey(예: XXBTZUSD)로 변환한다.
       const normalized = [];
       const seen = new Set();
-
       for (const item of watchlist) {
         const source = item.label || item.input || item.altname || item.pair;
         let quote = "USD";
-
-        if (source && source.includes("/")) {
-          quote = source.split("/")[1].toUpperCase();
-        }
-
+        if (source && source.includes("/")) quote = source.split("/")[1].toUpperCase();
         const found = findPair(source, quote);
         if (found && !seen.has(found.pair)) {
           normalized.push(found);
           seen.add(found.pair);
         }
       }
-
       watchlist = normalized.slice(0, MAX_COINS);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist));
     }
@@ -1081,25 +855,25 @@
     async function init() {
       loadHourlyAlerts();
       loadTenMinuteBasePrices();
+      loadWatchlist();
+
       const thresholdSelect = document.getElementById("blinkThresholdSelect");
       if (thresholdSelect) thresholdSelect.value = String(blinkThresholdPercent);
 
-      loadWatchlist();
       render();
+      renderTenMinuteRankings();
+
       try {
-        setStatus("거래쌍 목록 조회 중");
+        setStatus("거래쌍 목록 조회 중", "");
         await loadAssetPairs();
         normalizeSavedWatchlist();
         if (selectedTitlePair && !watchlist.some(item => item.pair === selectedTitlePair)) {
           selectedTitlePair = "";
-          previousSelectedPrice = null;
-          stopTitleBlink();
           localStorage.removeItem(SELECTED_TITLE_KEY);
         }
         render();
         setStatus("초기화 완료", "ok");
         await refreshNow();
-        renderTenMinuteRankings();
         startTimer();
       } catch (error) {
         console.error(error);
@@ -1108,19 +882,19 @@
       }
     }
 
-    document.getElementById("coinInput").addEventListener("keydown", function (e) {
+    document.getElementById("coinInput").addEventListener("keydown", function(e) {
       if (e.key === "Enter") addCoin();
     });
 
-    window.addEventListener("focus", function () {
+    window.addEventListener("focus", function() {
       restoreSelectedTitleAfterUserCheck();
     });
 
-    document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) {
-        restoreSelectedTitleAfterUserCheck();
-      }
+    document.addEventListener("visibilitychange", function() {
+      if (!document.hidden) restoreSelectedTitleAfterUserCheck();
     });
+
+    setInterval(resetHourlyAlertsIfNeeded, 10000);
 
     init();
   </script>

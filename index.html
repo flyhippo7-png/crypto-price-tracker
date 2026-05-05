@@ -132,7 +132,7 @@
 
     .main-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 330px;
+      grid-template-columns: minmax(0, 1fr) 350px;
       gap: 16px;
       align-items: start;
     }
@@ -167,6 +167,10 @@
     .price { color: var(--accent); font-weight: 800; }
     .up { color: var(--ok); }
     .down { color: var(--danger); }
+    .move-up { color: var(--ok); font-weight: 800; }
+    .move-down { color: var(--danger); font-weight: 800; }
+    .move-new { color: var(--warn); font-weight: 800; }
+    .move-same { color: var(--muted); }
 
     .empty {
       text-align: center;
@@ -180,21 +184,28 @@
     .side-panel {
       position: sticky;
       top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .ranking-card {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 16px;
       padding: 14px;
     }
 
-    .side-panel h3 { margin: 0 0 10px; font-size: 16px; }
+    .ranking-card h3 { margin: 0 0 10px; font-size: 16px; }
     .rank-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
     .rank-box { margin-top: 14px; }
     .rank-title { color: var(--muted); font-size: 13px; margin-bottom: 8px; font-weight: 700; }
 
     .rank-item {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 8px;
+      align-items: center;
       padding: 7px 0;
       border-bottom: 1px solid var(--line);
       font-size: 13px;
@@ -203,6 +214,7 @@
     .rank-item:last-child { border-bottom: none; }
     .rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .rank-change { font-weight: 800; }
+    .rank-move { min-width: 44px; text-align: right; font-size: 12px; }
 
     .footer-note {
       margin-top: 16px;
@@ -283,20 +295,39 @@
     <div class="main-grid">
       <div id="tableArea"></div>
       <aside class="side-panel">
-        <h3>최근 10분 변동률</h3>
-        <div class="rank-note">
-          10분마다 한 번 계산해 다음 계산 전까지 고정 표시합니다.<br>
-          계산구간: <span id="rankBaseTime">첫 계산 대기 중</span><br>
-          갱신시각: <span id="rankUpdateTime">-</span>
-        </div>
-        <div class="rank-box">
-          <div class="rank-title">상승 TOP 10</div>
-          <div id="topGainers">10분 경과 후 표시</div>
-        </div>
-        <div class="rank-box">
-          <div class="rank-title">하락 TOP 10</div>
-          <div id="topLosers">10분 경과 후 표시</div>
-        </div>
+        <section class="ranking-card">
+          <h3>최근 10분 변동률</h3>
+          <div class="rank-note">
+            10분마다 한 번 계산해 다음 계산 전까지 고정 표시합니다.<br>
+            계산구간: <span id="tenRankBaseTime">첫 계산 대기 중</span><br>
+            갱신시각: <span id="tenRankUpdateTime">-</span>
+          </div>
+          <div class="rank-box">
+            <div class="rank-title">상승 TOP 10</div>
+            <div id="tenTopGainers">10분 경과 후 표시</div>
+          </div>
+          <div class="rank-box">
+            <div class="rank-title">하락 TOP 10</div>
+            <div id="tenTopLosers">10분 경과 후 표시</div>
+          </div>
+        </section>
+
+        <section class="ranking-card">
+          <h3>최근 1시간 변동률</h3>
+          <div class="rank-note">
+            1시간마다 한 번 계산해 다음 계산 전까지 고정 표시합니다.<br>
+            계산구간: <span id="hourRankBaseTime">첫 계산 대기 중</span><br>
+            갱신시각: <span id="hourRankUpdateTime">-</span>
+          </div>
+          <div class="rank-box">
+            <div class="rank-title">상승 TOP 10</div>
+            <div id="hourTopGainers">1시간 경과 후 표시</div>
+          </div>
+          <div class="rank-box">
+            <div class="rank-title">하락 TOP 10</div>
+            <div id="hourTopLosers">1시간 경과 후 표시</div>
+          </div>
+        </section>
       </aside>
     </div>
 
@@ -313,6 +344,9 @@
     const TEN_MIN_BASE_PRICES_KEY = "kraken_ten_min_base_prices_v1";
     const TEN_MIN_BASE_TIME_KEY = "kraken_ten_min_base_time_v1";
     const TEN_MIN_RANKINGS_KEY = "kraken_ten_min_rankings_v1";
+    const HOUR_BASE_PRICES_KEY = "kraken_hour_base_prices_v1";
+    const HOUR_BASE_TIME_KEY = "kraken_hour_base_time_v1";
+    const HOUR_RANKINGS_KEY = "kraken_hour_rankings_v1";
     const DEFAULT_TITLE = "Kraken 코인 시세 감시";
     const MAX_COINS = 200;
     const KRAKEN_BASE = "https://api.kraken.com/0/public";
@@ -326,6 +360,9 @@
     let tenMinBasePrices = new Map();
     let tenMinBaseTime = Number(localStorage.getItem(TEN_MIN_BASE_TIME_KEY)) || 0;
     let tenMinRankings = null;
+    let hourBasePrices = new Map();
+    let hourBaseTime = Number(localStorage.getItem(HOUR_BASE_TIME_KEY)) || 0;
+    let hourRankings = null;
     let refreshTimer = null;
     let refreshInterval = 10000;
     let isLoading = false;
@@ -497,6 +534,7 @@
       priceData.delete(pair);
       previousPriceMap.delete(pair);
       tenMinBasePrices.delete(pair);
+      hourBasePrices.delete(pair);
       hourlyAlertCoins.delete(pair);
       if (priorityAlertCoin && priorityAlertCoin.pair === pair) priorityAlertCoin = null;
       if (selectedTitlePair === pair) {
@@ -506,8 +544,9 @@
       }
       saveHourlyAlerts();
       saveTenMinuteBasePrices();
+      saveHourBasePrices();
       saveWatchlist();
-      renderTenMinuteRankings();
+      renderAllRankings();
       updateBrowserTitle();
     }
 
@@ -517,18 +556,23 @@
       priceData.clear();
       previousPriceMap.clear();
       tenMinBasePrices.clear();
+      hourBasePrices.clear();
       hourlyAlertCoins.clear();
       selectedTitlePair = "";
       priceAlertActive = false;
       priorityAlertCoin = null;
       tenMinBaseTime = 0;
       tenMinRankings = null;
+      hourBaseTime = 0;
+      hourRankings = null;
       localStorage.removeItem(SELECTED_TITLE_KEY);
       localStorage.removeItem(TEN_MIN_RANKINGS_KEY);
+      localStorage.removeItem(HOUR_RANKINGS_KEY);
       saveHourlyAlerts();
       saveTenMinuteBasePrices();
+      saveHourBasePrices();
       saveWatchlist();
-      renderTenMinuteRankings();
+      renderAllRankings();
       updateBrowserTitle();
     }
 
@@ -576,10 +620,11 @@
         setLastUpdate();
         setStatus("정상 조회", "ok");
         updateTenMinuteBaseIfNeeded();
+        updateHourBaseIfNeeded();
         checkAllCoinsThreePercentAlert();
         checkSelectedPriceAlert();
         render();
-        renderTenMinuteRankings();
+        renderAllRankings();
         updateBrowserTitle();
       } catch (error) {
         console.error(error);
@@ -683,6 +728,55 @@
       }
     }
 
+    function getRankMoveText(item, previousItems) {
+      if (!previousItems || !Array.isArray(previousItems)) return { text: "신규", className: "move-new" };
+      const previousIndex = previousItems.findIndex(x => x.label === item.label);
+      if (previousIndex === -1) return { text: "신규", className: "move-new" };
+      const diff = previousIndex - item.rankIndex;
+      if (diff > 0) return { text: `▲${diff}`, className: "move-up" };
+      if (diff < 0) return { text: `▼${Math.abs(diff)}`, className: "move-down" };
+      return { text: "-", className: "move-same" };
+    }
+
+    function buildRankingRows(basePrices) {
+      const rows = [];
+      for (const item of watchlist) {
+        const base = basePrices.get(item.pair);
+        const p = priceData.get(item.pair);
+        if (!base || !p || !Number.isFinite(base) || !Number.isFinite(p.last)) continue;
+        const changePercent = ((p.last - base) / base) * 100;
+        rows.push({ label: item.label, price: p.last, changePercent });
+      }
+      return rows;
+    }
+
+    function calculateRanking(baseTime, basePrices, previousRanking) {
+      const now = Date.now();
+      const rows = buildRankingRows(basePrices);
+      const previousGainers = previousRanking && previousRanking.gainers ? previousRanking.gainers : null;
+      const previousLosers = previousRanking && previousRanking.losers ? previousRanking.losers : null;
+
+      const gainers = rows
+        .filter(x => x.changePercent > 0)
+        .sort((a, b) => b.changePercent - a.changePercent)
+        .slice(0, 10)
+        .map((x, idx) => {
+          const item = { ...x, rankIndex: idx };
+          return { ...item, move: getRankMoveText(item, previousGainers) };
+        });
+
+      const losers = rows
+        .filter(x => x.changePercent < 0)
+        .sort((a, b) => a.changePercent - b.changePercent)
+        .slice(0, 10)
+        .map((x, idx) => {
+          const item = { ...x, rankIndex: idx };
+          return { ...item, move: getRankMoveText(item, previousLosers) };
+        });
+
+      return { from: baseTime, to: now, gainers, losers };
+    }
+
     function saveTenMinuteBasePrices() {
       localStorage.setItem(TEN_MIN_BASE_PRICES_KEY, JSON.stringify(Array.from(tenMinBasePrices.entries())));
       localStorage.setItem(TEN_MIN_BASE_TIME_KEY, String(tenMinBaseTime));
@@ -723,58 +817,100 @@
       }
 
       if (now - tenMinBaseTime >= tenMinutes) {
-        const rows = [];
-        for (const item of watchlist) {
-          const base = tenMinBasePrices.get(item.pair);
-          const p = priceData.get(item.pair);
-          if (!base || !p || !Number.isFinite(base) || !Number.isFinite(p.last)) continue;
-          const changePercent = ((p.last - base) / base) * 100;
-          rows.push({ label: item.label, price: p.last, changePercent });
-        }
-
-        tenMinRankings = {
-          from: tenMinBaseTime,
-          to: now,
-          gainers: rows.filter(x => x.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent).slice(0, 10),
-          losers: rows.filter(x => x.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent).slice(0, 10)
-        };
+        tenMinRankings = calculateRanking(tenMinBaseTime, tenMinBasePrices, tenMinRankings);
         saveTenMinuteRankings();
-
-        tenMinBasePrices.clear();
-        for (const item of watchlist) {
-          const p = priceData.get(item.pair);
-          if (p && Number.isFinite(p.last)) tenMinBasePrices.set(item.pair, p.last);
-        }
+        resetPeriodBasePrices(tenMinBasePrices);
         tenMinBaseTime = now;
         saveTenMinuteBasePrices();
       }
     }
 
-    function renderTenMinuteRankings() {
-      const baseTimeEl = document.getElementById("rankBaseTime");
-      const updateTimeEl = document.getElementById("rankUpdateTime");
-      const gainersEl = document.getElementById("topGainers");
-      const losersEl = document.getElementById("topLosers");
-      if (!baseTimeEl || !updateTimeEl || !gainersEl || !losersEl) return;
+    function saveHourBasePrices() {
+      localStorage.setItem(HOUR_BASE_PRICES_KEY, JSON.stringify(Array.from(hourBasePrices.entries())));
+      localStorage.setItem(HOUR_BASE_TIME_KEY, String(hourBaseTime));
+    }
 
-      if (!tenMinRankings) {
-        baseTimeEl.textContent = "첫 계산 대기 중";
-        updateTimeEl.textContent = "-";
-        gainersEl.textContent = "10분 경과 후 표시";
-        losersEl.textContent = "10분 경과 후 표시";
+    function saveHourRankings() {
+      localStorage.setItem(HOUR_RANKINGS_KEY, JSON.stringify(hourRankings));
+    }
+
+    function loadHourBasePrices() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(HOUR_BASE_PRICES_KEY) || "[]");
+        hourBasePrices = Array.isArray(saved) ? new Map(saved) : new Map();
+      } catch (_) {
+        hourBasePrices = new Map();
+      }
+      hourBaseTime = Number(localStorage.getItem(HOUR_BASE_TIME_KEY)) || 0;
+      try {
+        hourRankings = JSON.parse(localStorage.getItem(HOUR_RANKINGS_KEY) || "null");
+      } catch (_) {
+        hourRankings = null;
+      }
+    }
+
+    function updateHourBaseIfNeeded() {
+      const now = Date.now();
+      const oneHour = 60 * 60 * 1000;
+
+      if (!hourBaseTime || hourBasePrices.size === 0) {
+        hourBasePrices.clear();
+        for (const item of watchlist) {
+          const p = priceData.get(item.pair);
+          if (p && Number.isFinite(p.last)) hourBasePrices.set(item.pair, p.last);
+        }
+        hourBaseTime = now;
+        saveHourBasePrices();
         return;
       }
 
-      baseTimeEl.textContent = `${new Date(tenMinRankings.from).toLocaleTimeString("ko-KR")} ~ ${new Date(tenMinRankings.to).toLocaleTimeString("ko-KR")}`;
-      updateTimeEl.textContent = new Date(tenMinRankings.to).toLocaleTimeString("ko-KR");
+      if (now - hourBaseTime >= oneHour) {
+        hourRankings = calculateRanking(hourBaseTime, hourBasePrices, hourRankings);
+        saveHourRankings();
+        resetPeriodBasePrices(hourBasePrices);
+        hourBaseTime = now;
+        saveHourBasePrices();
+      }
+    }
+
+    function resetPeriodBasePrices(targetMap) {
+      targetMap.clear();
+      for (const item of watchlist) {
+        const p = priceData.get(item.pair);
+        if (p && Number.isFinite(p.last)) targetMap.set(item.pair, p.last);
+      }
+    }
+
+    function renderRankingPanel(ranking, baseId, updateId, gainersId, losersId, emptyText) {
+      const baseTimeEl = document.getElementById(baseId);
+      const updateTimeEl = document.getElementById(updateId);
+      const gainersEl = document.getElementById(gainersId);
+      const losersEl = document.getElementById(losersId);
+      if (!baseTimeEl || !updateTimeEl || !gainersEl || !losersEl) return;
+
+      if (!ranking) {
+        baseTimeEl.textContent = "첫 계산 대기 중";
+        updateTimeEl.textContent = "-";
+        gainersEl.textContent = emptyText;
+        losersEl.textContent = emptyText;
+        return;
+      }
+
+      baseTimeEl.textContent = `${new Date(ranking.from).toLocaleTimeString("ko-KR")} ~ ${new Date(ranking.to).toLocaleTimeString("ko-KR")}`;
+      updateTimeEl.textContent = new Date(ranking.to).toLocaleTimeString("ko-KR");
 
       const makeRankHtml = function(items) {
         if (!items || items.length === 0) return "표시할 데이터 없음";
-        return items.map((x, idx) => `<div class="rank-item"><span class="rank-name">${idx + 1}. ${x.label}</span><span class="rank-change ${x.changePercent >= 0 ? "up" : "down"}">${x.changePercent >= 0 ? "+" : ""}${x.changePercent.toFixed(2)}%</span></div>`).join("");
+        return items.map((x, idx) => `<div class="rank-item"><span class="rank-name">${idx + 1}. ${x.label}</span><span class="rank-change ${x.changePercent >= 0 ? "up" : "down"}">${x.changePercent >= 0 ? "+" : ""}${x.changePercent.toFixed(2)}%</span><span class="rank-move ${x.move ? x.move.className : "move-same"}">${x.move ? x.move.text : "-"}</span></div>`).join("");
       };
 
-      gainersEl.innerHTML = makeRankHtml(tenMinRankings.gainers);
-      losersEl.innerHTML = makeRankHtml(tenMinRankings.losers);
+      gainersEl.innerHTML = makeRankHtml(ranking.gainers);
+      losersEl.innerHTML = makeRankHtml(ranking.losers);
+    }
+
+    function renderAllRankings() {
+      renderRankingPanel(tenMinRankings, "tenRankBaseTime", "tenRankUpdateTime", "tenTopGainers", "tenTopLosers", "10분 경과 후 표시");
+      renderRankingPanel(hourRankings, "hourRankBaseTime", "hourRankUpdateTime", "hourTopGainers", "hourTopLosers", "1시간 경과 후 표시");
     }
 
     function formatPrice(value) {
@@ -855,13 +991,14 @@
     async function init() {
       loadHourlyAlerts();
       loadTenMinuteBasePrices();
+      loadHourBasePrices();
       loadWatchlist();
 
       const thresholdSelect = document.getElementById("blinkThresholdSelect");
       if (thresholdSelect) thresholdSelect.value = String(blinkThresholdPercent);
 
       render();
-      renderTenMinuteRankings();
+      renderAllRankings();
 
       try {
         setStatus("거래쌍 목록 조회 중", "");

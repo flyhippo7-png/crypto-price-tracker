@@ -29,9 +29,10 @@
     }
 
     .wrap {
-      max-width: 1400px;
-      margin: 0 auto;
+      max-width: none;
+      margin: 0;
       padding: 24px;
+      padding-right: 390px;
     }
 
     .header {
@@ -131,10 +132,7 @@
     .badge select { height: 28px; padding: 0 6px; }
 
     .main-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 350px;
-      gap: 16px;
-      align-items: start;
+      display: block;
     }
 
     table {
@@ -182,11 +180,16 @@
     }
 
     .side-panel {
-      position: sticky;
-      top: 16px;
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      width: 340px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      z-index: 50;
     }
 
     .ranking-card {
@@ -223,9 +226,18 @@
       line-height: 1.6;
     }
 
-    @media (max-width: 1000px) {
-      .main-grid { grid-template-columns: 1fr; }
-      .side-panel { position: static; }
+    @media (max-width: 1180px) {
+      .wrap {
+        padding-right: 24px;
+      }
+
+      .side-panel {
+        position: static;
+        width: 100%;
+        max-height: none;
+        overflow-y: visible;
+        margin-top: 16px;
+      }
     }
 
     @media (max-width: 800px) {

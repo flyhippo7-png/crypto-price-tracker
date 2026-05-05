@@ -937,14 +937,70 @@
       return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
     }
 
-    function renderTable() {
+    let sortConfig = { key: null, direction: 'asc' };
+
+function sortTable(key) {
+  if (sortConfig.key === key) {
+    sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortConfig.key = key;
+    sortConfig.direction = 'asc';
+  }
+  render();
+}
+
+function renderTable() {
       const area = document.getElementById("tableArea");
       if (watchlist.length === 0) {
         area.innerHTML = `<div class="empty">등록된 코인이 없습니다. 상단 입력창에서 코인을 추가하세요.</div>`;
         return;
       }
 
-      const rows = watchlist.map(item => {
+      let displayList = watchlist.map(item => {
+        const p = priceData.get(item.pair);
+        return {
+          ...item,
+          _price: p?.last ?? null,
+          _change: p?.change ?? null,
+          _bid: p?.bid ?? null,
+          _ask: p?.ask ?? null,
+          _high: p?.high ?? null,
+          _low: p?.low ?? null,
+          _volume: p?.volume ?? null,
+          _updated: p?.updatedAt ? p.updatedAt.getTime() : null
+        };
+      });
+
+      if (sortConfig.key) {
+        displayList.sort((a, b) => {
+          let v1, v2;
+          switch (sortConfig.key) {
+            case 'label': v1 = a.label; v2 = b.label; break;
+            case 'price': v1 = a._price; v2 = b._price; break;
+            case 'change': v1 = a._change; v2 = b._change; break;
+            case 'bid': v1 = a._bid; v2 = b._bid; break;
+            case 'ask': v1 = a._ask; v2 = b._ask; break;
+            case 'high': v1 = a._high; v2 = b._high; break;
+            case 'low': v1 = a._low; v2 = b._low; break;
+            case 'volume': v1 = a._volume; v2 = b._volume; break;
+            case 'updated': v1 = a._updated; v2 = b._updated; break;
+            default: return 0;
+          }
+
+          if (v1 == null) return 1;
+          if (v2 == null) return -1;
+
+          if (typeof v1 === 'string') {
+            return sortConfig.direction === 'asc'
+              ? v1.localeCompare(v2)
+              : v2.localeCompare(v1);
+          }
+
+          return sortConfig.direction === 'asc' ? v1 - v2 : v2 - v1;
+        });
+      }
+
+      const rows = displayList.map(item => {
         const p = priceData.get(item.pair);
         const checked = selectedTitlePair === item.pair ? "checked" : "";
         const alertMark = hourlyAlertCoins.has(item.pair) ? "🚨 " : "";
@@ -955,7 +1011,19 @@
         return `<tr><td><input type="checkbox" ${checked} onclick="selectTitleCoin('${item.pair}')" title="작업표시줄에 이 코인 표시"></td><td><div class="coin-name">${alertMark}${item.label}</div><div class="small">Kraken pair: ${item.pair}</div></td><td class="price">${p ? formatPrice(p.last) : "조회 전"}</td><td class="${changeClass}">${changeText}</td><td>${p ? formatPrice(p.bid) : "-"}</td><td>${p ? formatPrice(p.ask) : "-"}</td><td>${p ? formatPrice(p.high) : "-"}</td><td>${p ? formatPrice(p.low) : "-"}</td><td>${p ? formatNumber(p.volume) : "-"}</td><td>${updated}</td><td><button class="danger" onclick="removeCoin('${item.pair}')">삭제</button></td></tr>`;
       }).join("");
 
-      area.innerHTML = `<table><thead><tr><th>표시</th><th>코인명</th><th>시세</th><th>변동률</th><th>매수호가</th><th>매도호가</th><th>24h 고가</th><th>24h 저가</th><th>24h 거래량</th><th>갱신</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table>`;
+      area.innerHTML = `<table><thead><tr>
+<th>표시</th>
+<th onclick="sortTable('label')" style="cursor:pointer">코인명</th>
+<th onclick="sortTable('price')" style="cursor:pointer">시세</th>
+<th onclick="sortTable('change')" style="cursor:pointer">변동률</th>
+<th onclick="sortTable('bid')" style="cursor:pointer">매수호가</th>
+<th onclick="sortTable('ask')" style="cursor:pointer">매도호가</th>
+<th onclick="sortTable('high')" style="cursor:pointer">24h 고가</th>
+<th onclick="sortTable('low')" style="cursor:pointer">24h 저가</th>
+<th onclick="sortTable('volume')" style="cursor:pointer">24h 거래량</th>
+<th onclick="sortTable('updated')" style="cursor:pointer">갱신</th>
+<th>관리</th>
+</tr></thead><tbody>${rows}</tbody></table>`;
     }
 
     function render() {

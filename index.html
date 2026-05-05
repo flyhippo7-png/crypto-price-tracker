@@ -28,10 +28,56 @@
     }
 
     .wrap {
-      max-width: 1100px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 24px;
     }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .side-panel {
+      position: sticky;
+      top: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .side-panel h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .rank-box {
+      margin-top: 14px;
+    }
+
+    .rank-title {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .rank-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .rank-item:last-child { border-bottom: none; }
+    .rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-change { font-weight: 800; }
+    .rank-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
 
     .header {
       display: flex;
@@ -182,6 +228,11 @@
       line-height: 1.6;
     }
 
+    @media (max-width: 1000px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .side-panel { position: static; }
+    }
+
     @media (max-width: 800px) {
       .header { flex-direction: column; }
       .status { width: 100%; min-width: auto; }
@@ -251,7 +302,28 @@
       </div>
     </div>
 
-    <div id="tableArea"></div>
+    <div class="main-grid">
+      <div id="tableArea"></div>
+
+      <aside class="side-panel">
+        <h3>최근 10분 변동률</h3>
+        <div class="rank-note">
+          등록된 코인의 현재가와 10분 기준가를 비교해 계산합니다.<br />
+          기준시각: <span id="rankBaseTime">-</span><br />
+          갱신시각: <span id="rankUpdateTime">-</span>
+        </div>
+
+        <div class="rank-box">
+          <div class="rank-title">상승 TOP 10</div>
+          <div id="topGainers">기준 데이터 수집 중</div>
+        </div>
+
+        <div class="rank-box">
+          <div class="rank-title">하락 TOP 10</div>
+          <div id="topLosers">기준 데이터 수집 중</div>
+        </div>
+      </aside>
+    </div>
 
     <div class="footer-note">
       주의: 이 페이지는 시세 조회용 예제이며 매매 기능은 없습니다. Kraken API 응답 지연, 네트워크 차단, 거래쌍 미지원에 따라 일부 종목은 조회되지 않을 수 있습니다.
@@ -262,6 +334,11 @@
     const STORAGE_KEY = "kraken_watchlist_v1";
     const SELECTED_TITLE_KEY = "kraken_selected_title_pair_v1";
     const BLINK_THRESHOLD_KEY = "kraken_blink_threshold_percent_v1";
+    const HOURLY_ALERT_COINS_KEY = "kraken_hourly_alert_coins_v1";
+    const PRIORITY_ALERT_COIN_KEY = "kraken_priority_alert_coin_v1";
+    const LAST_ALERT_RESET_HOUR_KEY = "kraken_last_alert_reset_hour_v1";
+    const TEN_MIN_BASE_PRICES_KEY = "kraken_ten_min_base_prices_v1";
+    const TEN_MIN_BASE_TIME_KEY = "kraken_ten_min_base_time_v1";
     const DEFAULT_TITLE = "Kraken 코인 시세 감시";
     const MAX_COINS = 200;
     const KRAKEN_BASE = "https://api.kraken.com/0/public";
@@ -282,8 +359,11 @@
     let priceAlertActive = false;
     let previousPriceMap = new Map();
     let hourlyAlertCoins = new Map();
-    let lastAlertResetHour = new Date().getHours();
+    let lastAlertResetHour = Number(localStorage.getItem(LAST_ALERT_RESET_HOUR_KEY));
+    if (!Number.isFinite(lastAlertResetHour)) lastAlertResetHour = new Date().getHours();
     let priorityAlertCoin = null;
+    let tenMinBasePrices = new Map();
+    let tenMinBaseTime = Number(localStorage.getItem(TEN_MIN_BASE_TIME_KEY)) || 0;
 
     const defaultCoins = [
       { input: "BTC", pair: "XBT/USD", altname: "XBTUSD", label: "BTC/USD" },
@@ -377,18 +457,155 @@
       }
     }
 
+    function saveHourlyAlerts() {
+      const alertArray = Array.from(hourlyAlertCoins.entries());
+      localStorage.setItem(HOURLY_ALERT_COINS_KEY, JSON.stringify(alertArray));
+      localStorage.setItem(PRIORITY_ALERT_COIN_KEY, JSON.stringify(priorityAlertCoin));
+      localStorage.setItem(LAST_ALERT_RESET_HOUR_KEY, String(lastAlertResetHour));
+    }
+
+    function loadHourlyAlerts() {
+      try {
+        const savedAlerts = JSON.parse(localStorage.getItem(HOURLY_ALERT_COINS_KEY) || "[]");
+        if (Array.isArray(savedAlerts)) {
+          hourlyAlertCoins = new Map(savedAlerts);
+        }
+      } catch (_) {
+        hourlyAlertCoins = new Map();
+      }
+
+      try {
+        priorityAlertCoin = JSON.parse(localStorage.getItem(PRIORITY_ALERT_COIN_KEY) || "null");
+      } catch (_) {
+        priorityAlertCoin = null;
+      }
+
+      resetHourlyAlertsIfNeeded();
+    }
+
+    function clearHourlyAlerts() {
+      hourlyAlertCoins.clear();
+      priorityAlertCoin = null;
+      priceAlertActive = false;
+      localStorage.removeItem(HOURLY_ALERT_COINS_KEY);
+      localStorage.removeItem(PRIORITY_ALERT_COIN_KEY);
+      localStorage.setItem(LAST_ALERT_RESET_HOUR_KEY, String(lastAlertResetHour));
+    }
+
+    function saveTenMinuteBasePrices() {
+      localStorage.setItem(TEN_MIN_BASE_PRICES_KEY, JSON.stringify(Array.from(tenMinBasePrices.entries())));
+      localStorage.setItem(TEN_MIN_BASE_TIME_KEY, String(tenMinBaseTime));
+    }
+
+    function loadTenMinuteBasePrices() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(TEN_MIN_BASE_PRICES_KEY) || "[]");
+        if (Array.isArray(saved)) tenMinBasePrices = new Map(saved);
+      } catch (_) {
+        tenMinBasePrices = new Map();
+      }
+      tenMinBaseTime = Number(localStorage.getItem(TEN_MIN_BASE_TIME_KEY)) || 0;
+    }
+
+    function updateTenMinuteBaseIfNeeded() {
+      const now = Date.now();
+      const TEN_MINUTES = 10 * 60 * 1000;
+
+      if (!tenMinBaseTime || now - tenMinBaseTime >= TEN_MINUTES) {
+        tenMinBasePrices.clear();
+
+        for (const item of watchlist) {
+          const p = priceData.get(item.pair);
+          if (p && Number.isFinite(p.last)) {
+            tenMinBasePrices.set(item.pair, p.last);
+          }
+        }
+
+        tenMinBaseTime = now;
+        saveTenMinuteBasePrices();
+      }
+    }
+
+    function renderTenMinuteRankings() {
+      const baseTimeEl = document.getElementById("rankBaseTime");
+      const updateTimeEl = document.getElementById("rankUpdateTime");
+      const gainersEl = document.getElementById("topGainers");
+      const losersEl = document.getElementById("topLosers");
+      if (!baseTimeEl || !updateTimeEl || !gainersEl || !losersEl) return;
+
+      if (!tenMinBaseTime || tenMinBasePrices.size === 0) {
+        baseTimeEl.textContent = "수집 중";
+        updateTimeEl.textContent = "-";
+        gainersEl.textContent = "기준 데이터 수집 중";
+        losersEl.textContent = "기준 데이터 수집 중";
+        return;
+      }
+
+      const rows = [];
+      for (const item of watchlist) {
+        const base = tenMinBasePrices.get(item.pair);
+        const p = priceData.get(item.pair);
+        if (!base || !p || !Number.isFinite(base) || !Number.isFinite(p.last)) continue;
+
+        const changePercent = ((p.last - base) / base) * 100;
+        rows.push({
+          label: item.label,
+          price: p.last,
+          changePercent
+        });
+      }
+
+      baseTimeEl.textContent = new Date(tenMinBaseTime).toLocaleTimeString("ko-KR");
+      updateTimeEl.textContent = new Date().toLocaleTimeString("ko-KR");
+
+      if (rows.length === 0) {
+        gainersEl.textContent = "표시할 데이터 없음";
+        losersEl.textContent = "표시할 데이터 없음";
+        return;
+      }
+
+      const gainers = rows
+        .filter(x => x.changePercent > 0)
+        .sort((a, b) => b.changePercent - a.changePercent)
+        .slice(0, 10);
+
+      const losers = rows
+        .filter(x => x.changePercent < 0)
+        .sort((a, b) => a.changePercent - b.changePercent)
+        .slice(0, 10);
+
+      function makeRankHtml(items) {
+        if (items.length === 0) return "표시할 데이터 없음";
+        return items.map((x, idx) => `
+          <div class="rank-item">
+            <span class="rank-name">${idx + 1}. ${x.label}</span>
+            <span class="rank-change ${x.changePercent >= 0 ? "up" : "down"}">${x.changePercent >= 0 ? "+" : ""}${x.changePercent.toFixed(2)}%</span>
+          </div>
+        `).join("");
+      }
+
+      gainersEl.innerHTML = makeRankHtml(gainers);
+      losersEl.innerHTML = makeRankHtml(losers);
+    }
+
     function resetHourlyAlertsIfNeeded() {
       const now = new Date();
       const currentHour = now.getHours();
 
       if (now.getMinutes() === 0 && currentHour !== lastAlertResetHour) {
-        hourlyAlertCoins.clear();
-        priorityAlertCoin = null;
-        priceAlertActive = false;
         lastAlertResetHour = currentHour;
+        clearHourlyAlerts();
         updateBrowserTitle();
         render();
       }
+    }
+
+    function restoreSelectedTitleAfterUserCheck() {
+      if (!priorityAlertCoin && !priceAlertActive) return;
+      priorityAlertCoin = null;
+      priceAlertActive = false;
+      localStorage.removeItem(PRIORITY_ALERT_COIN_KEY);
+      updateBrowserTitle();
     }
 
     function checkAllCoinsThreePercentAlert() {
@@ -411,7 +628,8 @@
               label: item.label,
               price: currentPrice,
               diffPercent,
-              triggeredAt: new Date().toISOString()
+              triggeredAt: new Date().toISOString(),
+              alertHour: new Date().getHours()
             });
 
             if (!biggestAlert || diffPercent > biggestAlert.diffPercent) {
@@ -430,7 +648,10 @@
 
       if (biggestAlert) {
         priorityAlertCoin = biggestAlert;
+        saveHourlyAlerts();
         updateBrowserTitle();
+      } else if (hourlyAlertCoins.size > 0) {
+        saveHourlyAlerts();
       }
     }
 
@@ -616,6 +837,13 @@
     function removeCoin(pair) {
       watchlist = watchlist.filter(item => item.pair !== pair);
       priceData.delete(pair);
+      previousPriceMap.delete(pair);
+      tenMinBasePrices.delete(pair);
+      hourlyAlertCoins.delete(pair);
+      if (priorityAlertCoin && priorityAlertCoin.pair === pair) priorityAlertCoin = null;
+      saveHourlyAlerts();
+      saveTenMinuteBasePrices();
+      renderTenMinuteRankings();
       if (selectedTitlePair === pair) {
         selectedTitlePair = "";
         previousSelectedPrice = null;
@@ -631,6 +859,11 @@
       if (!confirm("등록된 코인을 모두 삭제하시겠습니까?")) return;
       watchlist = [];
       priceData.clear();
+      previousPriceMap.clear();
+      tenMinBasePrices.clear();
+      tenMinBaseTime = 0;
+      saveTenMinuteBasePrices();
+      clearHourlyAlerts();
       selectedTitlePair = "";
       previousSelectedPrice = null;
       stopTitleBlink();
@@ -687,8 +920,10 @@
 
         setLastUpdate();
         setStatus("정상 조회", "ok");
+        updateTenMinuteBaseIfNeeded();
         checkAllCoinsThreePercentAlert();
         render();
+        renderTenMinuteRankings();
         checkSelectedPriceBlink();
         updateBrowserTitle();
       } catch (error) {
@@ -844,6 +1079,8 @@
     }
 
     async function init() {
+      loadHourlyAlerts();
+      loadTenMinuteBasePrices();
       const thresholdSelect = document.getElementById("blinkThresholdSelect");
       if (thresholdSelect) thresholdSelect.value = String(blinkThresholdPercent);
 
@@ -862,6 +1099,7 @@
         render();
         setStatus("초기화 완료", "ok");
         await refreshNow();
+        renderTenMinuteRankings();
         startTimer();
       } catch (error) {
         console.error(error);
@@ -875,16 +1113,12 @@
     });
 
     window.addEventListener("focus", function () {
-      if (priceAlertActive) {
-        priceAlertActive = false;
-        updateBrowserTitle();
-      }
+      restoreSelectedTitleAfterUserCheck();
     });
 
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden && priceAlertActive) {
-        priceAlertActive = false;
-        updateBrowserTitle();
+      if (!document.hidden) {
+        restoreSelectedTitleAfterUserCheck();
       }
     });
 
